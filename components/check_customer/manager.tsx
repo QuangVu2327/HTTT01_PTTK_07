@@ -1,36 +1,190 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { supabase } from '@/lib/supabase'
 import {
-  getDanhSachChoXetDuyet,
-  getChiTietThongTin,
-  xetDuyetThongTin,
-} from '@/lib/services/check_customer'
-import type {
-  ThongTinCuTruWithKetQua,
-  ChiTietKhongHopLe,
-  KetQuaDuyet,
-} from '@/lib/types/CheckCustomerService'
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { User, FileText, CheckCircle, XCircle, Phone, Mail, MapPin, Calendar, IdCard } from 'lucide-react'
 
-// ── Thay bằng ID quản lý đang đăng nhập ──
-const MA_QUAN_LY = 'NV_QL_01'
+// ── Test: bỏ qua auth ──
+const TEST_MA_QUAN_LY = 'NV_QL_01'
 
-// ─────────────────────────────────────────────────
-// Component chính
-// ─────────────────────────────────────────────────
-export default function QuanLyXetDuyet() {
-  const [danhSach, setDanhSach] = useState<ThongTinCuTruWithKetQua[]>([])
+function generateId(prefix: string) {
+  return `${prefix}_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`
+}
+
+interface ThanhVien {
+  ma_thong_tin: string
+  ho_ten: string
+  cccd: string
+  ngay_sinh: string
+  gioi_tinh: string
+  ngay_cung_cap: string
+  ma_khach_hang: string
+  khong_hop_le: boolean
+  ghi_chu: string
+  da_chon: boolean
+}
+
+interface HoSoHoKhau {
+  ma_ho_gia_dinh: string
+  ma_hop_dong: string
+  chu_ho: {
+    ma_thong_tin: string
+    ho_ten: string
+    cccd: string
+    ngay_sinh: string
+    gioi_tinh: string
+    ngay_cap_cccd: string
+    noi_cap_cccd: string
+    dia_chi_thuong_tru: string
+    que_quan: string
+    nghe_nghiep: string
+    so_dien_thoai: string
+    email: string
+  }
+  thanh_vien: Array<{
+    ma_thong_tin: string
+    ho_ten: string
+    cccd: string
+    ngay_sinh: string
+    gioi_tinh: string
+    quan_he: string
+  }>
+  ket_qua_xet_duyet?: {
+    ket_qua: string
+    ghi_chu_chung: string
+    ngay_duyet: string
+  }
+}
+
+export default function ManagerPage() {
+  const [danhSach, setDanhSach] = useState<ThanhVien[]>([])
   const [loading, setLoading] = useState(true)
-  const [selected, setSelected] = useState<ThongTinCuTruWithKetQua | null>(null)
-  const [loadingDetail, setLoadingDetail] = useState(false)
+  const [searchText, setSearchText] = useState('')
+  const [filterTrangThai, setFilterTrangThai] = useState('Tat ca')
+  const [submitting, setSubmitting] = useState(false)
+  const [successMsg, setSuccessMsg] = useState('')
+  
+  // State cho modal chi tiết
+  const [selectedHoSo, setSelectedHoSo] = useState<HoSoHoKhau | null>(null)
+  const [isDetailOpen, setIsDetailOpen] = useState(false)
 
   async function loadDanhSach() {
     setLoading(true)
     try {
-      const data = await getDanhSachChoXetDuyet()
-      setDanhSach(data)
-    } catch (e) {
-      console.error(e)
+      // Lấy tất cả thông tin cư trú đang chờ duyệt
+      const { data, error } = await supabase
+        .from('thongtincutru')
+        .select(`
+          *,
+          khachhang:ma_khach_hang(ten, so_dien_thoai, email)
+        `)
+        .eq('trang_thai', 'Cho_duyet')
+        .order('ngay_cung_cap', { ascending: true })
+
+      if (error) throw error
+
+      setDanhSach(
+        (data ?? []).map((r: any) => ({
+          ma_thong_tin: r.ma_thong_tin,
+          ho_ten: r.ho_ten,
+          cccd: r.cccd,
+          ngay_sinh: r.ngay_sinh,
+          gioi_tinh: r.gioi_tinh,
+          ngay_cung_cap: r.ngay_cung_cap,
+          ma_khach_hang: r.ma_khach_hang,
+          khong_hop_le: false,
+          ghi_chu: '',
+          da_chon: false,
+        }))
+      )
+    } catch (error) {
+      console.error('Lỗi load danh sách:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // Hàm lấy chi tiết hộ khẩu theo mã khách hàng
+  async function handleXemChiTiet(thanhVien: ThanhVien) {
+    setLoading(true)
+    try {
+      // Lấy tất cả thành viên cùng mã khách hàng
+      const { data: allMembers, error } = await supabase
+        .from('thongtincutru')
+        .select(`
+          *,
+          khachhang:ma_khach_hang(
+            ten, 
+            so_dien_thoai, 
+            email,
+            gioi_tinh
+          )
+        `)
+        .eq('ma_khach_hang', thanhVien.ma_khach_hang)
+
+      if (error) throw error
+
+      if (!allMembers || allMembers.length === 0) {
+        alert('Không tìm thấy thông tin')
+        return
+      }
+
+      // Tìm chủ hộ (thường là người đầu tiên hoặc người đại diện)
+      const chuHo = allMembers[0]
+      
+      // Các thành viên còn lại
+      const cacThanhVien = allMembers.slice(1).map((m: any) => ({
+        ma_thong_tin: m.ma_thong_tin,
+        ho_ten: m.ho_ten,
+        cccd: m.cccd,
+        ngay_sinh: m.ngay_sinh,
+        gioi_tinh: m.gioi_tinh,
+        quan_he: m.quan_he_chu_ho || 'Thành viên'
+      }))
+
+      // Lấy kết quả xét duyệt nếu có
+      const { data: ketQua } = await supabase
+        .from('ketquaxetduyet')
+        .select('*')
+        .eq('ma_thong_tin', chuHo.ma_thong_tin)
+        .single()
+
+      setSelectedHoSo({
+        ma_ho_gia_dinh: thanhVien.ma_khach_hang,
+        ma_hop_dong: chuHo.ma_hop_dong || 'Chưa có',
+        chu_ho: {
+          ma_thong_tin: chuHo.ma_thong_tin,
+          ho_ten: chuHo.ho_ten,
+          cccd: chuHo.cccd,
+          ngay_sinh: chuHo.ngay_sinh,
+          gioi_tinh: chuHo.gioi_tinh,
+          ngay_cap_cccd: chuHo.ngay_cap_cccd || '',
+          noi_cap_cccd: chuHo.noi_cap_cccd || '',
+          dia_chi_thuong_tru: chuHo.dia_chi_thuong_tru || '',
+          que_quan: chuHo.que_quan || '',
+          nghe_nghiep: chuHo.nghe_nghiep || '',
+          so_dien_thoai: chuHo.khachhang?.so_dien_thoai || '',
+          email: chuHo.khachhang?.email || '',
+        },
+        thanh_vien: cacThanhVien,
+        ket_qua_xet_duyet: ketQua ? {
+          ket_qua: ketQua.ket_qua,
+          ghi_chu_chung: ketQua.ghi_chu_chung,
+          ngay_duyet: ketQua.ngay_duyet,
+        } : undefined
+      })
+      
+      setIsDetailOpen(true)
+    } catch (error) {
+      console.error('Lỗi load chi tiết:', error)
+      alert('Không thể tải thông tin chi tiết')
     } finally {
       setLoading(false)
     }
@@ -38,315 +192,385 @@ export default function QuanLyXetDuyet() {
 
   useEffect(() => { loadDanhSach() }, [])
 
-  async function handleChonPhieu(maThongTin: string) {
-    setLoadingDetail(true)
+  function toggleChon(ma: string) {
+    setDanhSach(prev => prev.map(p => p.ma_thong_tin === ma ? { ...p, da_chon: !p.da_chon } : p))
+  }
+
+  function toggleTatCa(checked: boolean) {
+    setDanhSach(prev => prev.map(p => ({ ...p, da_chon: checked })))
+  }
+
+  function toggleKhongHopLe(ma: string) {
+    setDanhSach(prev => prev.map(p => p.ma_thong_tin === ma ? { ...p, khong_hop_le: !p.khong_hop_le } : p))
+  }
+
+  function setGhiChu(ma: string, ghi_chu: string) {
+    setDanhSach(prev => prev.map(p => p.ma_thong_tin === ma ? { ...p, ghi_chu } : p))
+  }
+
+  const daSoChon = danhSach.filter(p => p.da_chon).length
+
+  const filtered = danhSach.filter(p => {
+    const matchSearch = searchText
+      ? p.ho_ten.toLowerCase().includes(searchText.toLowerCase()) || p.cccd.includes(searchText)
+      : true
+    return matchSearch
+  })
+
+  async function handleXacNhanDuyet() {
+    const daChon = danhSach.filter(p => p.da_chon)
+    if (daChon.length === 0) return
+
+    setSubmitting(true)
     try {
-      const data = await getChiTietThongTin(maThongTin)
-      setSelected(data)
-    } catch (e) {
-      console.error(e)
+      for (const phieu of daChon) {
+        const ketQua = phieu.khong_hop_le ? 'Khong_dat' : 'Dat'
+        const trangThaiMoi = phieu.khong_hop_le ? 'Khong_dat' : 'Da_duyet'
+
+        await supabase.from('ketquaxetduyet').insert({
+          ma_ket_qua: generateId('KQ'),
+          ma_thong_tin: phieu.ma_thong_tin,
+          ma_quan_ly: TEST_MA_QUAN_LY,
+          ket_qua: ketQua,
+          ghi_chu_chung: phieu.ghi_chu,
+          ngay_duyet: new Date().toISOString(),
+          chi_tiet_khong_hop_le: phieu.khong_hop_le && phieu.ghi_chu
+            ? [{ truong: 'Thông tin cư trú', ly_do: phieu.ghi_chu }]
+            : [],
+        })
+
+        await supabase
+          .from('thongtincutru')
+          .update({ trang_thai: trangThaiMoi })
+          .eq('ma_thong_tin', phieu.ma_thong_tin)
+      }
+
+      setSuccessMsg(`Đã duyệt ${daChon.length} hồ sơ thành công.`)
+      setTimeout(() => { setSuccessMsg(''); loadDanhSach() }, 2000)
+    } catch (e: any) {
+      alert('Lỗi: ' + e.message)
     } finally {
-      setLoadingDetail(false)
+      setSubmitting(false)
     }
   }
 
-  function handleDuyetXong() {
-    setSelected(null)
-    loadDanhSach()
-  }
-
-  // ── Layout: danh sách bên trái, chi tiết bên phải ──
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="max-w-6xl mx-auto py-8 px-4">
-
+    <>
+      <div className="min-h-screen bg-white px-6 py-8">
         {/* Header */}
         <div className="mb-6">
-          <h1 className="text-2xl font-semibold text-gray-900">Xét duyệt thông tin cư trú</h1>
+          <h1 className="text-2xl font-bold text-gray-900">Kiểm tra thông tin cư trú</h1>
           <p className="text-sm text-gray-500 mt-1">
-            {danhSach.length} phiếu đang chờ xét duyệt
+            Kiểm tra và xác nhận các thông tin cư trú của khách hàng. 
+            Bấm "Chi tiết" để xem đầy đủ thông tin hộ gia đình.
           </p>
         </div>
 
-        <div className="flex gap-5 items-start">
+        {/* Toolbar */}
+        <div className="flex items-center gap-3 mb-5">
+          <input 
+            value={searchText} 
+            onChange={e => setSearchText(e.target.value)}
+            placeholder="Tìm theo tên hoặc CMND"
+            className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 w-64" 
+          />
+          <button onClick={loadDanhSach}
+            className="bg-gray-800 text-white text-sm font-medium px-4 py-2 rounded-lg hover:bg-gray-700 transition-colors">
+            Làm mới
+          </button>
+        </div>
 
-          {/* Danh sách bên trái */}
-          <div className="w-80 shrink-0 space-y-2">
-            {loading ? (
-              Array.from({ length: 3 }).map((_, i) => (
-                <div key={i} className="bg-white rounded-xl border border-gray-200 p-4 animate-pulse">
-                  <div className="h-4 bg-gray-100 rounded w-3/4 mb-2" />
-                  <div className="h-3 bg-gray-100 rounded w-1/2" />
-                </div>
-              ))
-            ) : danhSach.length === 0 ? (
-              <div className="bg-white rounded-xl border border-gray-200 p-6 text-center">
-                <p className="text-sm text-gray-400">Không có phiếu nào chờ duyệt</p>
-              </div>
-            ) : (
-              danhSach.map(item => (
-                <button
-                  key={item.ma_thong_tin}
-                  onClick={() => handleChonPhieu(item.ma_thong_tin)}
-                  className={`w-full text-left bg-white rounded-xl border px-4 py-3.5 transition-all hover:border-gray-400 ${
-                    selected?.ma_thong_tin === item.ma_thong_tin
-                      ? 'border-gray-900 ring-1 ring-gray-900'
-                      : 'border-gray-200'
-                  }`}
-                >
-                  <p className="font-medium text-sm text-gray-900">{item.ho_ten}</p>
-                  <p className="text-xs text-gray-400 mt-0.5">CCCD: {item.cccd}</p>
-                  <p className="text-xs text-gray-400">{fmtDatetime(item.ngay_cung_cap)}</p>
-                </button>
-              ))
-            )}
+        {/* Success toast */}
+        {successMsg && (
+          <div className="bg-green-50 border border-green-200 text-green-700 text-sm px-4 py-3 rounded-lg mb-4">
+            ✓ {successMsg}
           </div>
+        )}
 
-          {/* Chi tiết + form xét duyệt bên phải */}
-          <div className="flex-1 min-w-0">
-            {loadingDetail && (
-              <div className="bg-white rounded-2xl border border-gray-200 p-8 text-center">
-                <p className="text-sm text-gray-400">Đang tải...</p>
+        {/* Table */}
+        {loading ? (
+          <div className="space-y-3">
+            {[1, 2, 3].map(i => (
+              <div key={i} className="border border-gray-100 rounded-xl p-4 animate-pulse">
+                <div className="h-4 bg-gray-100 rounded w-1/3 mb-2" />
+                <div className="h-3 bg-gray-100 rounded w-1/4" />
               </div>
-            )}
-
-            {!loadingDetail && !selected && (
-              <div className="bg-white rounded-2xl border border-gray-200 p-12 text-center">
-                <p className="text-gray-300 text-4xl mb-3">📋</p>
-                <p className="text-sm text-gray-400">Chọn một phiếu bên trái để xem chi tiết</p>
+            ))}
+          </div>
+        ) : filtered.length === 0 ? (
+          <div className="text-center py-16 text-gray-400">
+            <p>Không có hồ sơ nào chờ duyệt</p>
+          </div>
+        ) : (
+          <>
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-3">
+                <p className="text-sm text-gray-700 font-medium">
+                  Chi tiết thông tin khách hàng{' '}
+                  <span className="text-gray-400">(Tổng số người: {filtered.length} người)</span>
+                </p>
               </div>
-            )}
+              <p className="text-xs text-gray-400">Chọn nhiều để thao tác hàng loạt</p>
+            </div>
 
-            {!loadingDetail && selected && (
-              <FormXetDuyet
-                thongTin={selected}
-                onDone={handleDuyetXong}
-              />
-            )}
-          </div>
-        </div>
-      </div>
-    </div>
-  )
-}
+            {/* Bảng danh sách */}
+            <div className="border border-gray-200 rounded-xl overflow-hidden">
+              {/* Header row */}
+              <div className="grid grid-cols-[2rem_2.5rem_2fr_1.5fr_1.5fr_1fr_1fr_auto] gap-3 items-center px-4 py-3 bg-gray-50 border-b border-gray-200 text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                <div>#</div>
+                <div>Ảnh</div>
+                <div>Họ tên</div>
+                <div>CMND/CCCD</div>
+                <div>Ngày đăng ký</div>
+                <div>Giới tính</div>
+                <div>Trạng thái</div>
+                <div>Hành động</div>
+              </div>
 
-// ─────────────────────────────────────────────────
-// Form xét duyệt (UC 2.5.11)
-// ─────────────────────────────────────────────────
-const CACS_TRUONG = [
-  { key: 'ho_ten',             label: 'Họ và tên' },
-  { key: 'ngay_sinh',          label: 'Ngày sinh' },
-  { key: 'gioi_tinh',          label: 'Giới tính' },
-  { key: 'cccd',               label: 'Số CCCD' },
-  { key: 'ngay_cap_cccd',      label: 'Ngày cấp CCCD' },
-  { key: 'noi_cap_cccd',       label: 'Nơi cấp CCCD' },
-  { key: 'dia_chi_thuong_tru', label: 'Địa chỉ thường trú' },
-  { key: 'que_quan',           label: 'Quê quán' },
-]
+              {filtered.map((phieu, idx) => (
+                <div key={phieu.ma_thong_tin}
+                  className={`grid grid-cols-[2rem_2.5rem_2fr_1.5fr_1.5fr_1fr_1fr_auto] gap-3 items-center px-4 py-4 border-b border-gray-100 last:border-0 transition-colors ${phieu.da_chon ? 'bg-blue-50' : 'hover:bg-gray-50'}`}>
 
-function FormXetDuyet({
-  thongTin,
-  onDone,
-}: {
-  thongTin: ThongTinCuTruWithKetQua
-  onDone: () => void
-}) {
-  // Mỗi trường: { khongHopLe: boolean, lyDo: string }
-  const [flags, setFlags] = useState<Record<string, { khongHopLe: boolean; lyDo: string }>>(
-    Object.fromEntries(CACS_TRUONG.map(t => [t.key, { khongHopLe: false, lyDo: '' }]))
-  )
-  const [ghiChu, setGhiChu] = useState('')
-  const [loading, setLoading] = useState(false)
-  const [done, setDone] = useState(false)
-
-  function toggleFlag(key: string) {
-    setFlags(prev => ({
-      ...prev,
-      [key]: { ...prev[key], khongHopLe: !prev[key].khongHopLe, lyDo: prev[key].khongHopLe ? '' : prev[key].lyDo },
-    }))
-  }
-
-  function setLyDo(key: string, lyDo: string) {
-    setFlags(prev => ({ ...prev, [key]: { ...prev[key], lyDo } }))
-  }
-
-  async function handleXacNhan(ketQua: KetQuaDuyet) {
-    setLoading(true)
-    try {
-      const chiTiet: ChiTietKhongHopLe[] = CACS_TRUONG
-        .filter(t => flags[t.key].khongHopLe)
-        .map(t => ({ truong: t.label, ly_do: flags[t.key].lyDo || 'Không hợp lệ' }))
-
-      await xetDuyetThongTin({
-        ma_thong_tin: thongTin.ma_thong_tin,
-        ma_quan_ly: MA_QUAN_LY,
-        ket_qua: ketQua,
-        ghi_chu_chung: ghiChu,
-        chi_tiet_khong_hop_le: chiTiet,
-      })
-      setDone(true)
-    } catch (e) {
-      console.error(e)
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  if (done) {
-    return (
-      <div className="bg-white rounded-2xl border border-gray-200 p-10 text-center">
-        <div className="w-14 h-14 bg-green-50 rounded-full flex items-center justify-center mx-auto mb-4">
-          <svg className="w-7 h-7 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-          </svg>
-        </div>
-        <h2 className="text-lg font-semibold text-gray-900 mb-1">Đã duyệt thông tin khách hàng</h2>
-        <p className="text-sm text-gray-500 mb-6">Kết quả đã được ghi nhận và thông báo cho khách hàng.</p>
-        <button onClick={onDone} className="text-sm text-blue-600 hover:underline">
-          Quay lại danh sách
-        </button>
-      </div>
-    )
-  }
-
-  const kh = (thongTin as any).KhachHang
-
-  return (
-    <div className="bg-white rounded-2xl border border-gray-200 divide-y divide-gray-100">
-
-      {/* Tiêu đề phiếu */}
-      <div className="px-6 py-4 flex items-center justify-between">
-        <div>
-          <p className="font-semibold text-gray-900">{thongTin.ho_ten}</p>
-          <p className="text-xs text-gray-400">Nộp lúc {fmtDatetime(thongTin.ngay_cung_cap)}</p>
-        </div>
-        <span className="text-xs bg-yellow-50 text-yellow-700 border border-yellow-200 px-3 py-1 rounded-full font-medium">
-          Chờ duyệt
-        </span>
-      </div>
-
-      {/* Thông tin khách hàng từ hệ thống */}
-      {kh && (
-        <div className="px-6 py-4 bg-gray-50">
-          <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Hồ sơ trong hệ thống</p>
-          <div className="flex gap-6 text-sm">
-            <span className="text-gray-600">Tên: <strong>{kh.ten}</strong></span>
-            <span className="text-gray-600">SĐT: <strong>{kh.so_dien_thoai}</strong></span>
-            <span className="text-gray-600">Email: <strong>{kh.email}</strong></span>
-          </div>
-        </div>
-      )}
-
-      {/* Bảng kiểm tra từng trường */}
-      <div className="px-6 py-5">
-        <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-4">
-          Đánh dấu thông tin không hợp lệ
-        </p>
-        <div className="space-y-3">
-          {CACS_TRUONG.map(({ key, label }) => {
-            const val = (thongTin as any)[key] ?? '—'
-            const flag = flags[key]
-            return (
-              <div
-                key={key}
-                className={`rounded-xl border px-4 py-3 transition-colors ${
-                  flag.khongHopLe ? 'border-red-200 bg-red-50' : 'border-gray-100'
-                }`}
-              >
-                <div className="flex items-start gap-3">
                   {/* Checkbox */}
-                  <button
-                    onClick={() => toggleFlag(key)}
-                    className={`mt-0.5 w-5 h-5 rounded border-2 flex items-center justify-center shrink-0 transition-colors ${
-                      flag.khongHopLe
-                        ? 'bg-red-500 border-red-500'
-                        : 'border-gray-300 hover:border-gray-400'
-                    }`}
-                    title="Đánh dấu không hợp lệ"
-                  >
-                    {flag.khongHopLe && (
-                      <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M6 18L18 6M6 6l12 12" />
-                      </svg>
-                    )}
-                  </button>
+                  <input type="checkbox" checked={phieu.da_chon}
+                    onChange={() => toggleChon(phieu.ma_thong_tin)}
+                    className="accent-blue-600" />
 
-                  {/* Nội dung */}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-baseline justify-between gap-2">
-                      <span className="text-xs text-gray-400">{label}</span>
-                      <span className="text-sm font-medium text-gray-900 text-right">
-                        {key === 'ngay_sinh' || key === 'ngay_cap_cccd' ? fmt(val) : val}
+                  {/* Avatar */}
+                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-400 to-indigo-500 flex items-center justify-center text-white text-xs font-bold">
+                    {phieu.ho_ten.charAt(0)}
+                  </div>
+
+                  {/* Tên + ngày sinh */}
+                  <div>
+                    <p className="text-sm font-medium text-gray-900">{phieu.ho_ten}</p>
+                    <p className="text-xs text-gray-400">Ngày sinh: {phieu.ngay_sinh ? new Date(phieu.ngay_sinh).toLocaleDateString('vi-VN') : '—'}</p>
+                  </div>
+
+                  {/* CCCD */}
+                  <div className="text-sm text-gray-700">{phieu.cccd}</div>
+
+                  {/* Ngày đăng ký */}
+                  <div className="text-sm text-gray-700">
+                    {phieu.ngay_cung_cap ? new Date(phieu.ngay_cung_cap).toLocaleDateString('vi-VN') : '—'}
+                  </div>
+
+                  {/* Giới tính */}
+                  <div className="text-sm text-gray-700">{phieu.gioi_tinh}</div>
+
+                  {/* Không hợp lệ checkbox */}
+                  <div className="space-y-1.5">
+                    <label className="flex items-center gap-1.5 text-xs cursor-pointer">
+                      <input type="checkbox" checked={phieu.khong_hop_le}
+                        onChange={() => toggleKhongHopLe(phieu.ma_thong_tin)}
+                        className="accent-red-500" />
+                      <span className={phieu.khong_hop_le ? 'text-red-600 font-medium' : 'text-gray-500'}>
+                        Không hợp lệ
                       </span>
-                    </div>
-
-                    {/* Ghi chú lý do nếu đánh dấu không hợp lệ */}
-                    {flag.khongHopLe && (
-                      <input
-                        type="text"
-                        value={flag.lyDo}
-                        onChange={e => setLyDo(key, e.target.value)}
-                        placeholder="Ghi rõ lý do không hợp lệ..."
-                        className="mt-2 w-full text-sm border border-red-200 rounded-lg px-3 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-red-300"
+                    </label>
+                    {phieu.khong_hop_le && (
+                      <input 
+                        value={phieu.ghi_chu}
+                        onChange={e => setGhiChu(phieu.ma_thong_tin, e.target.value)}
+                        placeholder="Ghi chú..."
+                        className="w-full border border-gray-200 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-blue-400" 
                       />
                     )}
                   </div>
+
+                  {/* Hành động */}
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => handleXemChiTiet(phieu)}
+                      className="bg-gray-900 text-white text-xs font-medium px-3 py-1.5 rounded-lg hover:bg-gray-700 transition-colors">
+                      Chi tiết
+                    </button>
+                  </div>
                 </div>
-              </div>
-            )
-          })}
+              ))}
+            </div>
+          </>
+        )}
+
+        {/* Footer */}
+        <div className="flex items-center justify-between mt-5">
+          <div className="flex items-center gap-3">
+            <label className="flex items-center gap-1.5 text-sm text-gray-600 cursor-pointer">
+              <input type="checkbox"
+                checked={danhSach.length > 0 && danhSach.every(p => p.da_chon)}
+                onChange={e => toggleTatCa(e.target.checked)}
+                className="accent-blue-600" />
+              Chọn tất cả
+            </label>
+            <span className="text-sm text-gray-400">Đã chọn: {daSoChon}</span>
+          </div>
+          <div className="flex items-center gap-4">
+            <span className="text-sm text-gray-500">Tổng: {filtered.length} hồ sơ</span>
+            <button onClick={handleXacNhanDuyet}
+              disabled={submitting || daSoChon === 0}
+              className="bg-blue-600 text-white text-sm font-semibold px-6 py-2.5 rounded-lg hover:bg-blue-700 disabled:opacity-40 transition-colors">
+              {submitting ? 'Đang xử lý...' : 'Xác nhận duyệt'}
+            </button>
+          </div>
         </div>
       </div>
 
-      {/* Ghi chú chung */}
-      <div className="px-6 py-4">
-        <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">
-          Ghi chú chung
-        </label>
-        <textarea
-          value={ghiChu}
-          onChange={e => setGhiChu(e.target.value)}
-          placeholder="Ghi chú thêm (không bắt buộc)..."
-          rows={3}
-          className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-gray-900"
-        />
-      </div>
+      {/* Modal chi tiết hộ khẩu */}
+      <Dialog open={isDetailOpen} onOpenChange={setIsDetailOpen}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="text-xl flex items-center gap-2">
+              <FileText className="size-5" />
+              Thông tin hộ khẩu - {selectedHoSo?.ma_ho_gia_dinh}
+            </DialogTitle>
+          </DialogHeader>
 
-      {/* Nút xác nhận */}
-      <div className="px-6 py-4 flex justify-end gap-3">
-        {/* Đạt chỉ enable khi không có trường nào bị đánh không hợp lệ */}
-        {Object.values(flags).every(f => !f.khongHopLe) ? (
-          <button
-            onClick={() => handleXacNhan('Dat')}
-            disabled={loading}
-            className="bg-green-600 text-white text-sm font-medium px-6 py-2.5 rounded-lg hover:bg-green-700 disabled:opacity-50 transition-colors"
-          >
-            {loading ? 'Đang xử lý...' : '✓ Xác nhận đạt'}
-          </button>
-        ) : (
-          <button
-            onClick={() => handleXacNhan('Khong_dat')}
-            disabled={loading}
-            className="bg-red-600 text-white text-sm font-medium px-6 py-2.5 rounded-lg hover:bg-red-700 disabled:opacity-50 transition-colors"
-          >
-            {loading ? 'Đang xử lý...' : '✗ Xác nhận không đạt'}
-          </button>
-        )}
-      </div>
-    </div>
+          {selectedHoSo && (
+            <Tabs defaultValue="chuho" className="w-full">
+              <TabsList className="grid w-full grid-cols-3">
+                <TabsTrigger value="chuho" className="flex items-center gap-2">
+                  <User className="size-4" />
+                  Chủ hộ
+                </TabsTrigger>
+                <TabsTrigger value="thanhvien" className="flex items-center gap-2">
+                  <User className="size-4" />
+                  Thành viên ({selectedHoSo.thanh_vien.length})
+                </TabsTrigger>
+                <TabsTrigger value="ketqua" className="flex items-center gap-2">
+                  <CheckCircle className="size-4" />
+                  Kết quả duyệt
+                </TabsTrigger>
+              </TabsList>
+
+              {/* Tab Chủ hộ */}
+              <TabsContent value="chuho" className="space-y-4 mt-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-gray-500">Họ và tên</label>
+                    <p className="text-gray-900">{selectedHoSo.chu_ho.ho_ten}</p>
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-gray-500">Giới tính</label>
+                    <p className="text-gray-900">{selectedHoSo.chu_ho.gioi_tinh}</p>
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-gray-500">Số điện thoại</label>
+                    <p className="text-gray-900 flex items-center gap-2">
+                      <Phone className="size-3" />
+                      {selectedHoSo.chu_ho.so_dien_thoai || 'Chưa cập nhật'}
+                    </p>
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-gray-500">Email</label>
+                    <p className="text-gray-900 flex items-center gap-2">
+                      <Mail className="size-3" />
+                      {selectedHoSo.chu_ho.email || 'Chưa cập nhật'}
+                    </p>
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-gray-500">CCCD/CMND</label>
+                    <p className="text-gray-900 flex items-center gap-2">
+                      <IdCard className="size-3" />
+                      {selectedHoSo.chu_ho.cccd}
+                    </p>
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-gray-500">Ngày sinh</label>
+                    <p className="text-gray-900 flex items-center gap-2">
+                      <Calendar className="size-3" />
+                      {new Date(selectedHoSo.chu_ho.ngay_sinh).toLocaleDateString('vi-VN')}
+                    </p>
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-gray-500">Ngày cấp CCCD</label>
+                    <p className="text-gray-900">{selectedHoSo.chu_ho.ngay_cap_cccd || '—'}</p>
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-gray-500">Nơi cấp CCCD</label>
+                    <p className="text-gray-900">{selectedHoSo.chu_ho.noi_cap_cccd || '—'}</p>
+                  </div>
+                  <div className="space-y-2 col-span-2">
+                    <label className="text-sm font-medium text-gray-500">Địa chỉ thường trú</label>
+                    <p className="text-gray-900 flex items-center gap-2">
+                      <MapPin className="size-3" />
+                      {selectedHoSo.chu_ho.dia_chi_thuong_tru || '—'}
+                    </p>
+                  </div>
+                  <div className="space-y-2 col-span-2">
+                    <label className="text-sm font-medium text-gray-500">Quê quán</label>
+                    <p className="text-gray-900">{selectedHoSo.chu_ho.que_quan || '—'}</p>
+                  </div>
+                  <div className="space-y-2 col-span-2">
+                    <label className="text-sm font-medium text-gray-500">Nghề nghiệp</label>
+                    <p className="text-gray-900">{selectedHoSo.chu_ho.nghe_nghiep || '—'}</p>
+                  </div>
+                </div>
+              </TabsContent>
+
+              {/* Tab Thành viên */}
+              <TabsContent value="thanhvien" className="mt-4">
+                {selectedHoSo.thanh_vien.length === 0 ? (
+                  <p className="text-gray-400 text-center py-8">Không có thành viên nào</p>
+                ) : (
+                  <div className="space-y-3">
+                    {selectedHoSo.thanh_vien.map((tv, idx) => (
+                      <div key={tv.ma_thong_tin} className="border rounded-lg p-4">
+                        <div className="flex items-center justify-between mb-2">
+                          <h3 className="font-medium text-gray-900">{tv.ho_ten}</h3>
+                          <span className="text-xs bg-gray-100 px-2 py-1 rounded-full">
+                            {tv.quan_he}
+                          </span>
+                        </div>
+                        <div className="grid grid-cols-2 gap-2 text-sm">
+                          <div>
+                            <span className="text-gray-500">CCCD:</span> {tv.cccd}
+                          </div>
+                          <div>
+                            <span className="text-gray-500">Ngày sinh:</span> {new Date(tv.ngay_sinh).toLocaleDateString('vi-VN')}
+                          </div>
+                          <div>
+                            <span className="text-gray-500">Giới tính:</span> {tv.gioi_tinh}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </TabsContent>
+
+              {/* Tab Kết quả duyệt */}
+              <TabsContent value="ketqua" className="mt-4">
+                {selectedHoSo.ket_qua_xet_duyet ? (
+                  <div className="space-y-4">
+                    <div className={`p-4 rounded-lg ${selectedHoSo.ket_qua_xet_duyet.ket_qua === 'Dat' ? 'bg-green-50 border border-green-200' : 'bg-red-50 border border-red-200'}`}>
+                      <div className="flex items-center gap-2 mb-2">
+                        {selectedHoSo.ket_qua_xet_duyet.ket_qua === 'Dat' ? (
+                          <CheckCircle className="size-5 text-green-600" />
+                        ) : (
+                          <XCircle className="size-5 text-red-600" />
+                        )}
+                        <span className={`font-semibold ${selectedHoSo.ket_qua_xet_duyet.ket_qua === 'Dat' ? 'text-green-700' : 'text-red-700'}`}>
+                          Kết quả: {selectedHoSo.ket_qua_xet_duyet.ket_qua === 'Dat' ? 'ĐẠT' : 'KHÔNG ĐẠT'}
+                        </span>
+                      </div>
+                      {selectedHoSo.ket_qua_xet_duyet.ghi_chu_chung && (
+                        <p className="text-gray-700">Ghi chú: {selectedHoSo.ket_qua_xet_duyet.ghi_chu_chung}</p>
+                      )}
+                      <p className="text-sm text-gray-500 mt-2">
+                        Ngày duyệt: {new Date(selectedHoSo.ket_qua_xet_duyet.ngay_duyet).toLocaleString('vi-VN')}
+                      </p>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="text-center py-8 text-gray-400">
+                    <p>Chưa có kết quả duyệt</p>
+                  </div>
+                )}
+              </TabsContent>
+            </Tabs>
+          )}
+        </DialogContent>
+      </Dialog>
+    </>
   )
-}
-
-// ─────────────────────────────────────────────────
-// Helpers
-// ─────────────────────────────────────────────────
-function fmt(dateStr: string) {
-  if (!dateStr || dateStr === '—') return '—'
-  const [y, m, d] = dateStr.split('-')
-  return `${d}/${m}/${y}`
-}
-
-function fmtDatetime(iso: string) {
-  if (!iso) return '—'
-  return new Date(iso).toLocaleString('vi-VN')
 }
