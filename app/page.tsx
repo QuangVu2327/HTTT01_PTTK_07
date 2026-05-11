@@ -126,14 +126,10 @@ export default function LoginPage() {
 
       if (error) throw error
 
-      if (data.user) {
-        const dashboardPath = await resolveDashboardPath(
-          supabase,
-          data.user.id,
-          data.user.user_metadata?.role
-        )
-        router.push(dashboardPath)
-      }
+    if (data.user) {
+      // TEMP OVERRIDE FOR TESTING ONLY
+      router.push('/sales')
+    }
     } catch (error: unknown) {
       setError(error instanceof Error ? error.message : 'An error occurred')
     } finally {
