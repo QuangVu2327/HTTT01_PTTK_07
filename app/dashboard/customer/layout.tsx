@@ -4,6 +4,8 @@ import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar'
 import { DashboardSidebar } from '@/components/dashboard/sidebar-nav'
 import { signOut } from '@/lib/actions/auth'
 import type { Profile } from '@/lib/types'
+import { requireRole } from '@/app/dashboard/require-role'
+
 
 export default async function CustomerLayout({
   children,
@@ -17,15 +19,7 @@ export default async function CustomerLayout({
     redirect('/auth/login')
   }
 
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('*')
-    .eq('id', user.id)
-    .single()
-
-  if (!profile || profile.role !== 'customer') {
-    redirect(`/dashboard/${profile?.role || 'customer'}`)
-  }
+  const profile = await requireRole('customer')
 
   return (
     <SidebarProvider>

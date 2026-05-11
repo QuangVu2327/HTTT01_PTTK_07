@@ -23,160 +23,350 @@ import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 import { Building2 } from 'lucide-react'
 
+type Role =
+  | 'customer'
+  | 'manager'
+  | 'sales'
+  | 'accountant'
+
+function generateId(prefix: string) {
+  return `${prefix}_${Date.now()}`
+}
+
+async function createUserProfile(
+  supabase: ReturnType<typeof createClient>,
+  userId: string,
+  role: Role,
+  fullName: string,
+  email: string,
+  phone: string
+) {
+  // CUSTOMER
+  if (role === 'customer') {
+    const customerId = generateId('KH')
+
+    const { error } = await supabase
+      .from('khachhang')
+      .insert({
+        ma_khach_hang: customerId,
+        auth_id: userId,
+        ten: fullName,
+        email,
+        so_dien_thoai: phone || null,
+        gioi_tinh: null,
+        loai_doi_tuong: 'Khách thuê',
+      })
+
+    if (error) {
+      throw new Error(
+        `khachhang insert failed: ${error.message}`
+      )
+    }
+
+    return
+  }
+
+  // STAFF
+  const staffId = generateId('NV')
+
+  const { error: staffError } = await supabase
+    .from('nhanvien')
+    .insert({
+      ma_nhan_vien: staffId,
+      auth_id: userId,
+      ten: fullName,
+      email,
+      so_dien_thoai: phone || null,
+    })
+
+  if (staffError) {
+    throw new Error(
+      `nhanvien insert failed: ${staffError.message}`
+    )
+  }
+
+  // ROLE TABLE
+  let roleTable = ''
+
+  switch (role) {
+    case 'manager':
+      roleTable = 'quanly'
+      break
+
+    case 'sales':
+      roleTable = 'nhanviensale'
+      break
+
+    case 'accountant':
+      roleTable = 'nhanvienketoan'
+      break
+  }
+
+  const { error: roleError } = await supabase
+    .from(roleTable)
+    .insert({
+      ma_nhan_vien: staffId,
+    })
+
+  if (roleError) {
+    throw new Error(
+      `${roleTable} insert failed: ${roleError.message}`
+    )
+  }
+}
+
 export default function SignUpPage() {
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
-  const [confirmPassword, setConfirmPassword] = useState('')
-  const [fullName, setFullName] = useState('')
-  const [role, setRole] = useState<string>('customer')
-  const [error, setError] = useState<string | null>(null)
-  const [isLoading, setIsLoading] = useState(false)
   const router = useRouter()
 
-  const handleSignUp = async (e: React.FormEvent) => {
+  const [fullName, setFullName] = useState('')
+  const [email, setEmail] = useState('')
+  const [phone, setPhone] = useState('')
+  const [password, setPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] =
+    useState('')
+
+  const [role, setRole] =
+    useState<Role>('customer')
+
+  const [error, setError] =
+    useState<string | null>(null)
+
+  const [isLoading, setIsLoading] =
+    useState(false)
+
+  const handleSignUp = async (
+    e: React.FormEvent
+  ) => {
     e.preventDefault()
-    const supabase = createClient()
-    setIsLoading(true)
+
     setError(null)
-
-    if (password !== confirmPassword) {
-      setError('Passwords do not match')
-      setIsLoading(false)
-      return
-    }
-
-    if (password.length < 6) {
-      setError('Password must be at least 6 characters')
-      setIsLoading(false)
-      return
-    }
+    setIsLoading(true)
 
     try {
-      const { error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          emailRedirectTo:
-            process.env.NEXT_PUBLIC_DEV_SUPABASE_REDIRECT_URL ??
-            `${window.location.origin}/auth/callback`,
-          data: {
-            full_name: fullName,
-            role: role,
+      if (password !== confirmPassword) {
+        throw new Error('Passwords do not match')
+      }
+
+      if (password.length < 6) {
+        throw new Error(
+          'Password must be at least 6 characters'
+        )
+      }
+
+      const supabase = createClient()
+
+      const { data, error: signUpError } =
+        await supabase.auth.signUp({
+          email,
+          password,
+          options: {
+            emailRedirectTo:
+              process.env
+                .NEXT_PUBLIC_DEV_SUPABASE_REDIRECT_URL ??
+              `${window.location.origin}/auth/callback`,
+            data: {
+              role,
+              full_name: fullName,
+            },
           },
-        },
-      })
-      
-      if (error) throw error
-      router.push('/auth/sign-up-success')
-    } catch (error: unknown) {
-      setError(error instanceof Error ? error.message : 'An error occurred')
+        })
+
+      if (signUpError) {
+        throw signUpError
+      }
+
+      if (!data.user) {
+        throw new Error('User creation failed')
+      }
+
+      // CREATE DB PROFILE
+      await createUserProfile(
+        supabase,
+        data.user.id,
+        role,
+        fullName,
+        email,
+        phone
+      )
+
+      // REDIRECT BASED ON ROLE
+      switch (role) {
+        case 'manager':
+          router.push('/dashboard/manager')
+          break
+
+        case 'sales':
+          router.push('/dashboard/sales')
+          break
+
+        case 'accountant':
+          router.push('/dashboard/accountant')
+          break
+
+        default:
+          router.push('/dashboard/customer')
+      }
+    } catch (err: unknown) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : 'Something went wrong'
+      )
     } finally {
       setIsLoading(false)
     }
   }
 
   return (
-    <div className="flex min-h-svh w-full items-center justify-center bg-muted/30 p-6 md:p-10">
-      <div className="w-full max-w-sm">
-        <div className="flex flex-col gap-6">
-          <div className="flex items-center justify-center gap-2">
-            <Building2 className="h-8 w-8 text-primary" />
-            <span className="text-2xl font-bold">DormHub</span>
-          </div>
-          
-          <Card>
-            <CardHeader className="text-center">
-              <CardTitle className="text-xl">Create an account</CardTitle>
-              <CardDescription>
-                Enter your details to get started
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <form onSubmit={handleSignUp}>
-                <div className="flex flex-col gap-4">
-                  <div className="grid gap-2">
-                    <Label htmlFor="fullName">Full Name</Label>
-                    <Input
-                      id="fullName"
-                      type="text"
-                      placeholder="John Doe"
-                      required
-                      value={fullName}
-                      onChange={(e) => setFullName(e.target.value)}
-                    />
-                  </div>
-                  
-                  <div className="grid gap-2">
-                    <Label htmlFor="email">Email</Label>
-                    <Input
-                      id="email"
-                      type="email"
-                      placeholder="name@example.com"
-                      required
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                    />
-                  </div>
-                  
-                  <div className="grid gap-2">
-                    <Label htmlFor="role">Account Type</Label>
-                    <Select value={role} onValueChange={setRole}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select account type" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="customer">Customer (Tenant)</SelectItem>
-                        <SelectItem value="sales">Sales Staff</SelectItem>
-                        <SelectItem value="accountant">Accountant</SelectItem>
-                        <SelectItem value="manager">Manager</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  
-                  <div className="grid gap-2">
-                    <Label htmlFor="password">Password</Label>
-                    <Input
-                      id="password"
-                      type="password"
-                      required
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                    />
-                  </div>
-                  
-                  <div className="grid gap-2">
-                    <Label htmlFor="confirmPassword">Confirm Password</Label>
-                    <Input
-                      id="confirmPassword"
-                      type="password"
-                      required
-                      value={confirmPassword}
-                      onChange={(e) => setConfirmPassword(e.target.value)}
-                    />
-                  </div>
-                  
-                  {error && (
-                    <p className="text-sm text-destructive">{error}</p>
-                  )}
-                  
-                  <Button type="submit" className="w-full" disabled={isLoading}>
-                    {isLoading ? 'Creating account...' : 'Create account'}
-                  </Button>
-                </div>
-                
-                <div className="mt-4 text-center text-sm text-muted-foreground">
-                  Already have an account?{' '}
-                  <Link
-                    href="/auth/login"
-                    className="text-primary underline-offset-4 hover:underline"
-                  >
-                    Sign in
-                  </Link>
-                </div>
-              </form>
-            </CardContent>
-          </Card>
+    <div className="flex min-h-svh items-center justify-center bg-muted/30 p-6">
+      <div className="w-full max-w-md">
+        <div className="mb-6 flex items-center justify-center gap-2">
+          <Building2 className="h-8 w-8 text-primary" />
+
+          <h1 className="text-2xl font-bold">
+            DormHub
+          </h1>
         </div>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Create Account</CardTitle>
+
+            <CardDescription>
+              Register a new account
+            </CardDescription>
+          </CardHeader>
+
+          <CardContent>
+            <form
+              onSubmit={handleSignUp}
+              className="space-y-4"
+            >
+              <div className="space-y-2">
+                <Label>Full Name</Label>
+
+                <Input
+                  value={fullName}
+                  onChange={(e) =>
+                    setFullName(e.target.value)
+                  }
+                  required
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label>Email</Label>
+
+                <Input
+                  type="email"
+                  value={email}
+                  onChange={(e) =>
+                    setEmail(e.target.value)
+                  }
+                  required
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label>Phone</Label>
+
+                <Input
+                  value={phone}
+                  onChange={(e) =>
+                    setPhone(e.target.value)
+                  }
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label>Role</Label>
+
+                <Select
+                  value={role}
+                  onValueChange={(v) =>
+                    setRole(v as Role)
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+
+                  <SelectContent>
+                    <SelectItem value="customer">
+                      Customer
+                    </SelectItem>
+
+                    <SelectItem value="sales">
+                      Sales
+                    </SelectItem>
+
+                    <SelectItem value="accountant">
+                      Accountant
+                    </SelectItem>
+
+                    <SelectItem value="manager">
+                      Manager
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Password</Label>
+
+                <Input
+                  type="password"
+                  value={password}
+                  onChange={(e) =>
+                    setPassword(e.target.value)
+                  }
+                  required
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label>Confirm Password</Label>
+
+                <Input
+                  type="password"
+                  value={confirmPassword}
+                  onChange={(e) =>
+                    setConfirmPassword(
+                      e.target.value
+                    )
+                  }
+                  required
+                />
+              </div>
+
+              {error && (
+                <p className="text-sm text-destructive">
+                  {error}
+                </p>
+              )}
+
+              <Button
+                type="submit"
+                className="w-full"
+                disabled={isLoading}
+              >
+                {isLoading
+                  ? 'Creating Account...'
+                  : 'Create Account'}
+              </Button>
+
+              <div className="text-center text-sm text-muted-foreground">
+                Already have an account?{' '}
+                <Link
+                  href="/auth/login"
+                  className="text-primary hover:underline"
+                >
+                  Login
+                </Link>
+              </div>
+            </form>
+          </CardContent>
+        </Card>
       </div>
     </div>
   )
