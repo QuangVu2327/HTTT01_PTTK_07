@@ -9,7 +9,7 @@ export default function DepositRequestCard({ phieuCoc }: { phieuCoc: any }) {
   const trangThai = phieuCoc.trang_thai;
   const isAlreadyCreated = !!phieuCoc.thoi_han_tt;
 
-  // LẤY MÃ PHÒNG (Có fallback thông minh để không bao giờ bị trống giao diện)
+  // LẤY MÃ PHÒNG (Có fallback thông minh)
   const dbMaPhong = phieuCoc.chitietdatcoc_giuong?.[0]?.giuong?.ma_phong;
   const hienThiMaPhong = dbMaPhong || (phieuCoc.loai_thue === 'Nguyen phong' ? 'P101' : 'P102');
 
@@ -85,9 +85,9 @@ export default function DepositRequestCard({ phieuCoc }: { phieuCoc: any }) {
   }
 
   return (
-    <div className="max-w-3xl border rounded-xl overflow-hidden shadow-sm font-sans bg-white mb-6">
-      {/* Header */}
-      <div className="bg-[#0b7b93] text-white p-4 text-xl font-bold flex justify-between items-center">
+    <div className="max-w-3xl border border-neutral-200 rounded-xl overflow-hidden shadow-sm font-sans bg-white mb-6">
+      {/* Header - Đổi sang màu đen tuyền */}
+      <div className="bg-black text-white p-4 text-xl font-bold flex justify-between items-center">
         <span>Yêu cầu đặt cọc: {phieuCoc.ma_phieu_coc}</span>
         <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${badgeConfig.bg}`}>
           {badgeConfig.text}
@@ -95,18 +95,17 @@ export default function DepositRequestCard({ phieuCoc }: { phieuCoc: any }) {
       </div>
 
       <div className="p-6 flex flex-col md:flex-row gap-8 items-start">
-        {/* Chi tiết */}
-        <div className="bg-[#0b7b93] text-white p-6 rounded-xl flex-1 w-full">
-          <h2 className="text-lg font-bold mb-4 border-b border-white/30 pb-2">Chi tiết phòng cọc</h2>
+        {/* Chi tiết - Đổi sang màu xám đen anthracite cực sang */}
+        <div className="bg-neutral-900 text-white p-6 rounded-xl flex-1 w-full">
+          <h2 className="text-lg font-bold mb-4 border-b border-white/20 pb-2">Chi tiết phòng cọc</h2>
           <div className="space-y-2 text-sm md:text-base">
-            {/* SỐ PHÒNG XUẤT HIỆN Ở ĐÂY CỰC KỲ CHUẨN CHỈ */}
             <p>Số phòng đặt cọc: <span className="font-extrabold text-yellow-300 text-lg">{hienThiMaPhong}</span></p>
             <p>Tên khách: <span className="font-semibold">{phieuCoc.khachhang?.ten || 'Không rõ'}</span></p>
             <p>Hình thức thuê: {phieuCoc.loai_thue}</p>
             <p>Số giường đặt cọc: {phieuCoc.so_giuong_thue} giường</p>
             <p>Trạng thái gốc: {phieuCoc.trang_thai}</p>
             {phieuCoc.ghi_chu && (
-              <div className="bg-black/10 p-2 rounded mt-2 border-l-2 border-yellow-300">
+              <div className="bg-white/10 p-2 rounded mt-2 border-l-2 border-yellow-300">
                 <p className="text-yellow-200 italic text-xs">Lý do/Ghi chú: {phieuCoc.ghi_chu}</p>
               </div>
             )}
@@ -129,20 +128,20 @@ export default function DepositRequestCard({ phieuCoc }: { phieuCoc: any }) {
 
           {/* Cụm nút bấm xử lý */}
           <div className="flex gap-4">
-            {/* Nút chính */}
+            {/* Nút chính - Đổi sang màu đen hover xám */}
             <button 
               onClick={handleTaoYeuCau}
               disabled={isActionDisabled}
               className={`font-bold py-2 px-6 rounded-full transition-all duration-200 flex-[1.5] text-center ${
                 isActionDisabled 
-                  ? 'bg-gray-200 text-gray-400 cursor-not-allowed border border-gray-200' 
-                  : 'bg-[#0b7b93] text-white hover:bg-teal-700 shadow-sm'
+                  ? 'bg-gray-100 text-gray-400 cursor-not-allowed border border-gray-100' 
+                  : 'bg-black text-white hover:bg-neutral-800 shadow-sm'
               }`}
             >
               {buttonText}
             </button>
 
-            {/* Nút phụ */}
+            {/* Nút phụ - Giữ nguyên màu cam để cảnh báo chỉnh sửa */}
             {!isAlreadyCreated && trangThai === 'Cho thanh toan' && (
               <button 
                 onClick={handleYeuCauChinhSua}
