@@ -421,36 +421,55 @@ function TabTraCuu() {
     setInputError('')
     const val = keyword.trim()
     const isCCCD = /^\d{12}$/.test(val)
-    const isSdt  = /^0\d{9}$/.test(val)
+    const isSdt = /^0\d{9,10}$/.test(val)  // SĐT 10-11 số
 
     if (!isCCCD && !isSdt) {
-      setInputError('Vui lòng nhập CCCD hoặc số điện thoại hợp lệ')
+      setInputError('Vui lòng nhập CCCD (12 số) hoặc số điện thoại (10-11 số) hợp lệ')
       return
     }
 
     setLoading(true)
     setSearched(false)
     try {
-      let maKH: string | null = null
+      let query = supabase
+        .from('thongtincutru')
+        .select(`
+          *,
+          ketquaxetduyet (*)
+        `)
 
-      if (isSdt) {
-        const { data: kh } = await supabase
-          .from('KhachHang').select('ma_khach_hang').eq('so_dien_thoai', val).single()
-        if (!kh) { setResult(null); setSearched(true); setLoading(false); return }
-        maKH = kh.ma_khach_hang
+      // Tìm theo CCCD hoặc SĐT
+      if (isCCCD) {
+        query = query.eq('cccd', val)
+      } else {
+        // Nếu là SĐT, cần tìm ma_khach_hang trước
+        const { data: khachHang } = await supabase
+          .from('khachhang')
+          .select('ma_khach_hang')
+          .eq('so_dien_thoai', val)
+          .maybeSingle()
+
+        if (!khachHang) {
+          setResult(null)
+          setSearched(true)
+          setLoading(false)
+          return
+        }
+        query = query.eq('ma_khach_hang', khachHang.ma_khach_hang)
       }
 
-      const query = supabase
-        .from('ThongTinCuTru')
-        .select(`*, KetQuaXetDuyet (*)`)
+      const { data, error } = await query
+        .order('ngay_cung_cap', { ascending: false })
+        .maybeSingle()
 
-      const { data } = await (isCCCD
-        ? query.eq('cccd', val)
-        : query.eq('ma_khach_hang', maKH!)
-      ).order('ngay_cung_cap', { ascending: false }).limit(1).single()
-
-      setResult(data ?? null)
-    } catch {
+      if (error) {
+        console.error('Lỗi truy vấn:', error)
+        setResult(null)
+      } else {
+        setResult(data ?? null)
+      }
+    } catch (err) {
+      console.error('Lỗi:', err)
       setResult(null)
     } finally {
       setLoading(false)
@@ -458,11 +477,16 @@ function TabTraCuu() {
     }
   }
 
-  const ketQua = result?.KetQuaXetDuyet?.[0]
+  const ketQua = result?.ketquaxetduyet?.[0]
   const isDat = ketQua?.ket_qua === 'Dat'
   const isKhongDat = ketQua?.ket_qua === 'Khong_dat'
+  const isWaiting = result && !ketQua  // Đã có hồ sơ nhưng chưa duyệt
 
-  function reset() { setSearched(false); setResult(null); setKeyword('') }
+  function reset() {
+    setSearched(false)
+    setResult(null)
+    setKeyword('')
+  }
 
   return (
     <div className="max-w-4xl mx-auto px-6 py-8">
@@ -470,27 +494,48 @@ function TabTraCuu() {
       <div className="flex items-start justify-between mb-8">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Tra cứu kết quả cư trú</h1>
-          <p className="text-sm text-gray-500 mt-1">Nhập CCCD hoặc số điện thoại để tra cứu trạng thái cư trú. Kết quả sẽ trả về nhanh chóng và bảo mật.</p>
+          <p className="text-sm text-gray-500 mt-1">
+            Nhập CCCD hoặc số điện thoại để tra cứu trạng thái hồ sơ cư trú của bạn.
+          </p>
         </div>
-        <div className="w-20 h-14 bg-red-100 rounded-xl flex items-center justify-center text-3xl select-none">📋</div>
+        <div className="w-20 h-14 bg-red-100 rounded-xl flex items-center justify-center text-3xl select-none">
+          📋
+        </div>
       </div>
 
-      {/* Search */}
+      {/* Search Box */}
       <div className="mb-8">
-        <label className="block text-sm font-medium text-gray-700 mb-2">CCCD hoặc số điện thoại</label>
+        <label className="block text-sm font-medium text-gray-700 mb-2">
+          CCCD hoặc số điện thoại
+        </label>
         <div className="flex gap-3 items-start">
           <div className="flex-1">
-            <input value={keyword}
-              onChange={e => { setKeyword(e.target.value); setInputError(''); setSearched(false) }}
+            <input
+              value={keyword}
+              onChange={e => {
+                setKeyword(e.target.value)
+                setInputError('')
+                setSearched(false)
+              }}
               onKeyDown={e => e.key === 'Enter' && !loading && handleSearch()}
-              placeholder="ví dụ: 0123456789 hoặc 123456789012"
-              className={`w-full border rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-red-400 ${inputError ? 'border-red-400 bg-red-50' : 'border-gray-300'}`} />
-            <p className="text-xs text-gray-400 mt-1">Vui lòng nhập 9-12 chữ số cho số điện thoại, 12 số cho CCCD.</p>
-            {inputError && <p className="text-xs text-red-500 mt-1">⚠ {inputError}</p>}
+              placeholder="Ví dụ: 0123456789 hoặc 123456789012"
+              className={`w-full border rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-red-400 ${
+                inputError ? 'border-red-400 bg-red-50' : 'border-gray-300'
+              }`}
+            />
+            <p className="text-xs text-gray-400 mt-1">
+              Nhập đủ 12 số đối với CCCD, hoặc 10-11 số đối với số điện thoại.
+            </p>
+            {inputError && (
+              <p className="text-xs text-red-500 mt-1">⚠ {inputError}</p>
+            )}
           </div>
           <div className="flex flex-col gap-2 shrink-0">
-            <button onClick={handleSearch} disabled={loading || !keyword.trim()}
-              className="bg-red-500 text-white font-semibold px-6 py-3 rounded-xl hover:bg-red-600 disabled:opacity-50 transition-colors flex items-center gap-2 text-sm">
+            <button
+              onClick={handleSearch}
+              disabled={loading || !keyword.trim()}
+              className="bg-red-500 text-white font-semibold px-6 py-3 rounded-xl hover:bg-red-600 disabled:opacity-50 transition-colors flex items-center gap-2 text-sm"
+            >
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
               </svg>
@@ -505,41 +550,67 @@ function TabTraCuu() {
         </div>
       </div>
 
-      {/* Không tìm thấy */}
+      {/* Không tìm thấy hồ sơ */}
       {searched && !result && (
         <div className="text-center py-14 text-gray-400">
+          <svg className="w-16 h-16 mx-auto text-gray-300 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
           <p className="text-base font-medium">Không tìm thấy thông tin</p>
-          <p className="text-sm mt-1">Nếu không có kết quả, thử kiểm tra lại định dạng hoặc liên hệ hỗ trợ.</p>
+          <p className="text-sm mt-1">
+            Vui lòng kiểm tra lại CCCD hoặc số điện thoại, hoặc liên hệ hỗ trợ.
+          </p>
         </div>
       )}
 
-      {/* Chờ duyệt */}
-      {searched && result && !ketQua && (
+      {/* Đang chờ duyệt */}
+      {searched && result && isWaiting && (
         <div className="bg-yellow-50 border border-yellow-200 rounded-2xl p-8 text-center">
-          <p className="font-semibold text-yellow-800 text-lg mb-1">⏳ Đang chờ xét duyệt</p>
-          <p className="text-sm text-yellow-700">Hồ sơ <strong>{result.ho_ten}</strong> đã được ghi nhận. Quản lý đang xem xét.</p>
+          <div className="w-16 h-16 bg-yellow-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <svg className="w-8 h-8 text-yellow-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          </div>
+          <p className="font-semibold text-yellow-800 text-lg mb-1">
+            ⏳ Đang chờ xét duyệt
+          </p>
+          <p className="text-sm text-yellow-700">
+            Hồ sơ của <strong>{result.ho_ten}</strong> đã được ghi nhận.
+            Quản lý đang xem xét và sẽ có kết quả sớm nhất.
+          </p>
+          <p className="text-xs text-yellow-600 mt-3">
+            Ngày gửi: {result.ngay_cung_cap ? new Date(result.ngay_cung_cap).toLocaleString('vi-VN') : '—'}
+          </p>
         </div>
       )}
 
       {/* Không đạt */}
       {searched && result && isKhongDat && (
         <div className="space-y-4">
-          <div className="bg-red-50 border border-red-200 rounded-2xl p-6 flex gap-6">
+          <div className="bg-red-50 border border-red-200 rounded-2xl p-6 flex flex-col md:flex-row gap-6">
             <div className="flex-1">
-              <p className="text-lg font-bold text-red-700 mb-1">Trạng thái: Không đạt</p>
-              <p className="text-sm text-red-600 mb-4">Hồ sơ của bạn chưa đạt yêu cầu kiểm duyệt. Vui lòng xem chi tiết nguyên nhân và các bước đề xuất phía dưới để hoàn thiện hồ sơ.</p>
-              <button className="bg-red-500 text-white text-sm font-medium px-4 py-2 rounded-lg hover:bg-red-600">Liên hệ hỗ trợ</button>
+              <div className="flex items-center gap-2 mb-2">
+                <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
+                  <svg className="w-5 h-5 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </div>
+                <p className="text-lg font-bold text-red-700">Trạng thái: Không đạt</p>
+              </div>
+              <p className="text-sm text-red-600 mb-4">
+                Hồ sơ của bạn chưa đạt yêu cầu kiểm duyệt. Vui lòng xem chi tiết nguyên nhân bên dưới.
+              </p>
+              <button className="bg-red-500 text-white text-sm font-medium px-4 py-2 rounded-lg hover:bg-red-600">
+                Liên hệ hỗ trợ
+              </button>
             </div>
             <div className="bg-white rounded-xl p-4 border border-red-100 min-w-52 text-sm">
-              <p className="font-semibold text-gray-800 mb-3">Thông tin chi tiết</p>
-              <p className="text-xs text-gray-400 mb-0.5">Mã hồ sơ: <span className="text-gray-700 font-medium">{result.ma_thong_tin}</span></p>
-              <div className="flex items-center gap-1 text-gray-600 mt-2 mb-0.5">
-                <span>👤</span><span className="text-xs">Họ và tên</span>
-              </div>
+              <p className="font-semibold text-gray-800 mb-3">Thông tin hồ sơ</p>
+              <p className="text-xs text-gray-400 mb-0.5">Mã hồ sơ</p>
+              <p className="font-medium text-gray-900 mb-2">{result.ma_thong_tin}</p>
+              <p className="text-xs text-gray-400 mb-0.5">Họ và tên</p>
               <p className="font-medium text-gray-900 mb-2">{result.ho_ten}</p>
-              <div className="flex items-center gap-1 text-gray-600 mb-0.5">
-                <span>🪪</span><span className="text-xs">CCCD / Số điện thoại</span>
-              </div>
+              <p className="text-xs text-gray-400 mb-0.5">CCCD / SĐT</p>
               <p className="font-medium text-gray-900">{result.cccd}</p>
             </div>
           </div>
@@ -547,24 +618,38 @@ function TabTraCuu() {
           {ketQua?.chi_tiet_khong_hop_le?.length > 0 && (
             <div className="bg-white border border-gray-200 rounded-2xl p-6">
               <div className="flex items-center justify-between mb-2">
-                <p className="font-semibold text-gray-900">Lý do</p>
-                <span className="text-sm text-gray-400">Tổng: {ketQua.chi_tiet_khong_hop_le.length} nguyên nhân</span>
+                <p className="font-semibold text-gray-900">📋 Lý do không đạt</p>
+                <span className="text-sm text-gray-400">
+                  Tổng: {ketQua.chi_tiet_khong_hop_le.length} nguyên nhân
+                </span>
               </div>
-              <p className="text-sm text-gray-500 mb-4">Các nguyên nhân khiến hồ sơ không đạt được liệt kê bên dưới.</p>
+              <p className="text-sm text-gray-500 mb-4">
+                Các nguyên nhân khiến hồ sơ không đạt được liệt kê bên dưới.
+              </p>
               <div className="space-y-2">
                 {ketQua.chi_tiet_khong_hop_le.map((c: any, i: number) => (
                   <div key={i} className="flex items-start gap-3 bg-red-50 border border-red-100 rounded-lg px-4 py-3">
                     <span className="text-red-500 mt-0.5 shrink-0">⚠</span>
                     <div>
                       <p className="text-sm text-gray-800">{c.ly_do}</p>
-                      {c.truong && <p className="text-xs text-red-500 mt-0.5">Yêu cầu: {c.truong}</p>}
+                      {c.truong && (
+                        <p className="text-xs text-red-500 mt-0.5">Yêu cầu: {c.truong}</p>
+                      )}
                     </div>
                   </div>
                 ))}
               </div>
+              {ketQua?.ghi_chu_chung && (
+                <div className="mt-4 p-3 bg-gray-50 rounded-lg">
+                  <p className="text-xs text-gray-500">Ghi chú từ quản lý:</p>
+                  <p className="text-sm text-gray-700">{ketQua.ghi_chu_chung}</p>
+                </div>
+              )}
               <div className="mt-5 flex justify-center">
-                <button onClick={reset}
-                  className="bg-red-500 text-white text-sm font-semibold px-8 py-2.5 rounded-xl hover:bg-red-600">
+                <button
+                  onClick={reset}
+                  className="bg-red-500 text-white text-sm font-semibold px-8 py-2.5 rounded-xl hover:bg-red-600"
+                >
                   Tra cứu lại
                 </button>
               </div>
@@ -584,38 +669,55 @@ function TabTraCuu() {
                 </svg>
               </div>
               <div>
-                <p className="text-lg font-bold text-gray-900">Trạng thái: <span className="text-green-600">Đạt</span></p>
-                <p className="text-sm text-gray-500">Hồ sơ của bạn đã được xác nhận đạt nội quy ký túc xá</p>
+                <p className="text-lg font-bold text-gray-900">
+                  Trạng thái: <span className="text-green-600">Đạt yêu cầu</span>
+                </p>
+                <p className="text-sm text-gray-500">
+                  Hồ sơ của bạn đã được xác nhận đạt nội quy ký túc xá
+                </p>
               </div>
             </div>
             <div className="flex gap-2">
-              <button onClick={reset}
-                className="border border-gray-300 text-gray-700 text-sm font-medium px-4 py-2 rounded-lg hover:bg-gray-50">
+              <button
+                onClick={reset}
+                className="border border-gray-300 text-gray-700 text-sm font-medium px-4 py-2 rounded-lg hover:bg-gray-50"
+              >
                 Tra cứu lại
               </button>
               <button className="bg-green-600 text-white text-sm font-medium px-4 py-2 rounded-lg hover:bg-green-700">
-                Xác nhận thuê
+                Tiến hành thuê phòng
               </button>
             </div>
           </div>
 
           <div className="bg-white border border-gray-200 rounded-2xl p-6">
             <div className="flex items-center justify-between mb-6">
-              <h3 className="font-semibold text-gray-900">Thông tin chi tiết</h3>
+              <h3 className="font-semibold text-gray-900">📄 Chi tiết hồ sơ</h3>
               <p className="text-xs text-gray-400">
-                Bản ghi cập nhật: {ketQua?.ngay_duyet ? new Date(ketQua.ngay_duyet).toLocaleString('vi-VN') : '—'}
+                Ngày duyệt: {ketQua?.ngay_duyet ? new Date(ketQua.ngay_duyet).toLocaleString('vi-VN') : '—'}
               </p>
             </div>
             <div className="grid grid-cols-2 gap-x-12 gap-y-5 text-sm">
-              <InfoItem label="Họ tên" value={result.ho_ten} />
-              <InfoItem label="Ngày cung cấp thông tin" value={result.ngay_cung_cap ? new Date(result.ngay_cung_cap).toLocaleString('vi-VN') : '—'} />
-              <InfoItem label="CCCD/SDT" value={result.cccd} />
+              <InfoItem label="Họ và tên" value={result.ho_ten} />
               <InfoItem label="Mã hồ sơ" value={result.ma_thong_tin} />
-              <InfoItem label="Ghi chú liên quan" value={ketQua?.ghi_chu_chung || '—'} />
+              <InfoItem label="CCCD" value={result.cccd} />
+              <InfoItem label="Giới tính" value={result.gioi_tinh} />
+              <InfoItem label="Ngày sinh" value={result.ngay_sinh ? new Date(result.ngay_sinh).toLocaleDateString('vi-VN') : '—'} />
+              <InfoItem label="Ngày cung cấp" value={result.ngay_cung_cap ? new Date(result.ngay_cung_cap).toLocaleDateString('vi-VN') : '—'} />
+              <InfoItem label="Quan hệ với chủ hộ" value={result.quan_he_chu_ho || 'Thành viên'} />
               <InfoItem label="Người xử lý" value={ketQua?.ma_quan_ly || '—'} />
-              <InfoItem label="Trạng thái xử lý" value="Đã phê duyệt" valueClass="text-green-600 font-medium" />
-              <InfoItem label="Ngày xác nhận" value={ketQua?.ngay_duyet ? new Date(ketQua.ngay_duyet).toLocaleDateString('vi-VN') : '—'} />
+              <InfoItem 
+                label="Kết quả xét duyệt" 
+                value="Đạt yêu cầu" 
+                valueClass="text-green-600 font-semibold" 
+              />
             </div>
+            {ketQua?.ghi_chu_chung && (
+              <div className="mt-4 pt-3 border-t border-gray-100">
+                <p className="text-xs text-gray-400">Ghi chú</p>
+                <p className="text-sm text-gray-700">{ketQua.ghi_chu_chung}</p>
+              </div>
+            )}
           </div>
         </div>
       )}
