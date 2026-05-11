@@ -463,13 +463,11 @@ function TabTraCuu() {
         .maybeSingle()
 
       if (error) {
-        console.error('Lỗi truy vấn:', error)
         setResult(null)
       } else {
         setResult(data ?? null)
       }
     } catch (err) {
-      console.error('Lỗi:', err)
       setResult(null)
     } finally {
       setLoading(false)
