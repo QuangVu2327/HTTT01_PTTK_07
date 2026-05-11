@@ -14,3 +14,9 @@ next.user-config.*
 node_modules
 .next/
 .DS_Store
+
+.vs/
+.next/
+node_modules/
+*.vsidx
+*.suo
