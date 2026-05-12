@@ -63,7 +63,7 @@ export default function ManagerPage() {
 
   return (
     <div className="min-h-screen bg-gray-50 text-gray-900">
-      {/* 1. Header chuẩn của bạn ní */}
+      {/* 1. Header chuẩn */}
       <div className="border-b border-gray-200 bg-white px-6 py-4">
         <Link
           href="/dashboard"
