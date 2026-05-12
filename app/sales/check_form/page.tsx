@@ -61,7 +61,7 @@ export default function SalesPage() {
 
   return (
     <div className="min-h-screen bg-[#fafafa]">
-      {/* 1. Header chuẩn chỉnh bài bạn ní */}
+      {/* 1. Header chuẩn */}
       <div className="border-b border-gray-200 bg-white px-6 py-4 sticky top-0 z-10 shadow-sm">
         <Link
           href="/dashboard"
