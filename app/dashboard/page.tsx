@@ -10,7 +10,7 @@ const LINKS = [
     { label: 'Send Email', href: '/dashboard/manager/pick', icon: Mail, desc: 'Email customers' },
     { label: 'Refund Calculation', href: '/accountant/deposit_calculate', icon: Calculator, desc: 'Calculating the return deposit' },
     { label: 'Refund Confirmation', href: '/accountant/deposit_confirm_return', icon: ShieldCheck,desc: 'Confirm the refund of deposit'},
-    { label: 'Refund Verification', href: '/account/deposit_check_return', icon: SearchCheck, desc: 'Checking for the refund information'},
+    { label: 'Refund Verification', href: '/accountant/deposit_check_return', icon: SearchCheck, desc: 'Checking for the refund information'},
     { label: 'Rental Request Check', href: '/sales/check_form', icon: FileSearch, desc: 'Checking for rental form'},
     { label: 'Room Management', href: '/manager/check_room', icon: BedDouble, desc: 'Managing the room'},
 ]
