@@ -12,7 +12,7 @@ export default function Page() {
 
   const handleXacNhan = async () => {
     if (!maHopDong) {
-      alert("Ní ơi, nhập mã hợp đồng mới xác nhận được chứ!");
+      alert("Lỗi, yêu cầu nhập mã hợp đồng!");
       return;
     }
     
@@ -26,7 +26,7 @@ export default function Page() {
       await MH_XacNhanHoanCocService.capNhatPhieu(maHopDong, "Đã hoàn cọc");
       alert("Xác nhận hoàn cọc thành công! Hệ thống đã cập nhật trạng thái.");
     } catch (err: any) {
-      alert("Lỗi rồi ní ui: " + err.message);
+      alert("Có lỗi xảy ra: " + err.message);
     } finally {
       setLoading(false);
     }
@@ -39,7 +39,7 @@ export default function Page() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header chuẩn Dashboard giống bạn ní */}
+      {/* Header chuẩn Dashboard giống  */}
       <div className="border-b border-gray-200 bg-white px-6 py-4">
         <Link
           href="/dashboard"
@@ -112,7 +112,7 @@ export default function Page() {
             {!result ? (
               <div className="h-full min-h-[350px] flex flex-col items-center justify-center p-10 border-2 border-dashed border-gray-200 rounded-xl bg-white text-gray-400">
                 <Banknote className="h-16 w-16 mb-4 opacity-10" />
-                <p>Ní vui lòng nhập mã hợp đồng và bấm xác nhận.</p>
+                <p>Vui lòng nhập mã hợp đồng và bấm xác nhận.</p>
               </div>
             ) : (
               <div className="bg-white rounded-xl shadow-lg border border-indigo-100 overflow-hidden">
