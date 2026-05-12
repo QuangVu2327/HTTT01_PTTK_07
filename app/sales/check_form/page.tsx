@@ -135,7 +135,7 @@ export default function SalesPage() {
                 <div className="bg-orange-50 p-4 rounded-full mb-4">
                   <Search className="h-8 w-8 text-orange-300" />
                 </div>
-                <p className="text-gray-500 font-medium font-mono text-sm uppercase tracking-tighter">Vui lòng chọn 1 đơn hàng</p>
+                <p className="text-gray-500 font-medium text-sm uppercase tracking-widest">Vui lòng chọn 1 đơn hàng</p>
               </div>
             ) : (
               <div className="bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden animate-in fade-in slide-in-from-right-4 duration-300">
