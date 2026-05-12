@@ -33,7 +33,7 @@ export default function RegisterPage() {
                         soDienThoai: existing.so_dien_thoai || prev.soDienThoai,
                         email: existing.email || prev.email
                     }));
-                    alert("Tui tìm thấy thông tin cũ của ní rồi, đã tự điền giúp ní nhen!");
+                    alert("Tìm thấy thông tin cũ của khách hàng, đã điền.");
                 }
             } catch (err) {
                 console.error("Lỗi tìm kiếm khách hàng:", err);
@@ -46,7 +46,7 @@ export default function RegisterPage() {
         setLoading(true);
         try {
             await dangKyThuePhong(customer);
-            alert(`Xong rồi ní ơi! Đã lưu đơn đăng ký của ${customer.hoTen}.`);
+            alert(`Đã lưu đơn đăng ký của ${customer.hoTen}.`);
             setCustomer({
                 hoTen: '', soDienThoai: '', email: '', 
                 cccd: '', ngayDuKienVao: '', loaiPhongMuonThue: 'PhongDon'
@@ -60,7 +60,7 @@ export default function RegisterPage() {
 
     return (
         <div className="min-h-screen bg-gray-50">
-            {/* Header giống hệt bài bạn của ní */}
+            {/* Header giống hệt */}
             <div className="border-b border-gray-200 bg-white px-6 py-4">
                 <Link
                     href="/dashboard"
