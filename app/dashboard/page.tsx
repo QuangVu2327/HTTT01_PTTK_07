@@ -2,11 +2,11 @@ import Link from 'next/link'
 import { Building2, Users, ClipboardList, UserCheck, Mail, BedDouble } from 'lucide-react'
 
 const LINKS = [
-    { label: 'Customer Dashboard', href: '/customer/provide_information', icon: Users, desc: 'Customer home & room info' },
+    { label: 'Customer Information', href: '/customer/provide_information', icon: Users, desc: 'Customer info' },
     //{ label: 'Rooms (Customer)', href: '/dashboard/customer/rooms', icon: BedDouble, desc: 'Browse available rooms' },
-    //{ label: 'Manager Dashboard', href: '/dashboard/manager', icon: Building2, desc: 'Manager home' },
-    { label: 'Sales', href: 'sales', icon: ClipboardList, desc: 'Calculate sales' },
-    { label: 'Check Customer', href: 'manager/check_customer', icon: UserCheck, desc: 'Verify resident info' },
+    //{ label: 'Manager Check Costumer', href: '/manager/check_customer', icon: Building2, desc: 'Manager home' },
+    { label: 'Sales', href: '/sales', icon: ClipboardList, desc: 'Control Sales' },
+    { label: 'Check Customer', href: '/manager/check_customer', icon: UserCheck, desc: 'Verify resident info' },
     { label: 'Send Email', href: '/dashboard/manager/pick', icon: Mail, desc: 'Email customers' },
     //{ label: 'Buildings', href: '/dashboard/manager/buildings', icon: Building2, desc: 'Manage buildings & rooms' },
 ]

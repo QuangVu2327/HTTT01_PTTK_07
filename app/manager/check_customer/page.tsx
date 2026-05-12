@@ -1,3 +1,7 @@
+import Link from 'next/link'
+import { ChevronLeft } from 'lucide-react'
+import QuanLyXetDuyet from "@/components/check_customer/manager"
+
 export default function ManagerPage() {
     return (
         <>
