@@ -2,38 +2,44 @@
 
 import React, { useState } from "react";
 import Link from 'next/link';
-import { ChevronLeft, Search, RotateCcw, ClipboardCheck, Wallet } from 'lucide-react';
-import { MH_KiemTraThongTinHoanCocService } from "@/lib/services/check_return_deposit";
+import { ChevronLeft, ShieldCheck, XCircle, CheckCircle2, Info, Banknote } from 'lucide-react';
+import { MH_XacNhanHoanCocService } from "@/lib/services/confirm_deposit_return";
 
 export default function Page() {
   const [maHopDong, setMaHopDong] = useState("");
   const [result, setResult] = useState<any>(null);
   const [loading, setLoading] = useState(false);
 
-  const handleKiemTra = async () => {
+  const handleXacNhan = async () => {
     if (!maHopDong) {
-      alert("Ní quên nhập mã hợp đồng kìa!");
+      alert("Ní ơi, nhập mã hợp đồng mới xác nhận được chứ!");
       return;
     }
+    
     setLoading(true);
     try {
-      const data = await MH_KiemTraThongTinHoanCocService.tinhTienHoanCoc(maHopDong);
+      // Tính toán lại trước khi xác nhận để đảm bảo con số chính xác
+      const data = await MH_XacNhanHoanCocService.tinhToanHoanCoc(maHopDong);
       setResult(data);
+      
+      // Gọi lệnh cập nhật trạng thái
+      await MH_XacNhanHoanCocService.capNhatPhieu(maHopDong, "Đã hoàn cọc");
+      alert("Xác nhận hoàn cọc thành công! Hệ thống đã cập nhật trạng thái.");
     } catch (err: any) {
-      alert("Lỗi rồi ní ơi: " + err.message);
+      alert("Lỗi rồi ní ui: " + err.message);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleHuy = () => {
+  const handleHuyBo = () => {
     setMaHopDong("");
     setResult(null);
   };
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* 1. Header chuẩn Dashboard */}
+      {/* Header chuẩn Dashboard giống bạn ní */}
       <div className="border-b border-gray-200 bg-white px-6 py-4">
         <Link
           href="/dashboard"
@@ -45,110 +51,134 @@ export default function Page() {
       </div>
 
       <div className="p-6 md:p-10 max-w-5xl mx-auto">
-        {/* 2. Tiêu đề chính */}
-        <h1 className="text-3xl font-bold mb-8 text-gray-800 border-b pb-4">
-          Kiểm Tra Thông Tin Hoàn Cọc
+        <h1 className="text-3xl font-bold mb-8 text-gray-800 border-b pb-4 flex items-center gap-3">
+          Xác Nhận Hoàn Tất Hoàn Cọc
         </h1>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* CỘT TRÁI: Nhập mã */}
+          {/* CỘT TRÁI: Bảng điều khiển */}
           <div className="lg:col-span-1">
             <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-              <h2 className="text-lg font-semibold mb-4 flex items-center gap-2 text-gray-700">
-                <Search className="h-5 w-5 text-emerald-500" />
-                Tra cứu hợp đồng
+              <h2 className="text-lg font-semibold mb-4 flex items-center gap-2 text-indigo-700">
+                <ShieldCheck className="h-5 w-5" />
+                Thao tác hệ thống
               </h2>
               
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-600 mb-1">Mã hợp đồng</label>
+                  <label className="block text-sm font-medium text-gray-600 mb-1">Mã hợp đồng cần chốt</label>
                   <input
                     type="text"
                     value={maHopDong}
                     onChange={(e) => setMaHopDong(e.target.value)}
-                    placeholder="VD: HD123456..."
-                    className="w-full p-2.5 rounded-lg border border-gray-300 focus:ring-2 focus:ring-emerald-500 outline-none transition-all"
+                    placeholder="Nhập mã hợp đồng..."
+                    className="w-full p-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-indigo-500 outline-none transition-all font-mono"
                   />
                 </div>
 
-                <div className="grid grid-cols-2 gap-3">
+                <div className="flex flex-col gap-3">
                   <button 
-                    onClick={handleKiemTra} 
+                    onClick={handleXacNhan} 
                     disabled={loading}
-                    className={`flex items-center justify-center gap-2 py-2.5 rounded-lg font-semibold text-white transition-all ${
-                      loading ? 'bg-gray-400' : 'bg-emerald-600 hover:bg-emerald-700 shadow-sm'
+                    className={`flex items-center justify-center gap-2 py-3 rounded-lg font-bold text-white transition-all shadow-md ${
+                      loading ? 'bg-gray-400' : 'bg-indigo-600 hover:bg-indigo-700 active:scale-95'
                     }`}
                   >
-                    {loading ? "Chờ tẹo..." : "Kiểm tra"}
+                    <CheckCircle2 className="h-5 w-5" />
+                    {loading ? "Đang xử lý..." : "Xác nhận hoàn cọc"}
                   </button>
                   
                   <button 
-                    onClick={handleHuy}
-                    className="flex items-center justify-center gap-2 py-2.5 rounded-lg font-semibold text-gray-600 bg-gray-100 hover:bg-gray-200 transition-all"
+                    onClick={handleHuyBo}
+                    className="flex items-center justify-center gap-2 py-3 rounded-lg font-semibold text-red-600 bg-red-50 hover:bg-red-100 transition-all"
                   >
-                    <RotateCcw className="h-4 w-4" />
-                    Hủy
+                    <XCircle className="h-4 w-4" />
+                    Hủy bỏ thao tác
                   </button>
                 </div>
+              </div>
+
+              <div className="mt-6 p-4 bg-amber-50 rounded-lg border border-amber-100">
+                <p className="text-xs text-amber-700 flex gap-2">
+                  <Info className="h-4 w-4 shrink-0" />
+                  Lưu ý: Thao tác này sẽ cập nhật trạng thái phiếu thành "Đã hoàn cọc" và không thể hoàn tác.
+                </p>
               </div>
             </div>
           </div>
 
-          {/* CỘT PHẢI: Hiển thị kết quả */}
+          {/* CỘT PHẢI: Chi tiết phiếu đã chốt */}
           <div className="lg:col-span-2">
             {!result ? (
-              <div className="h-full min-h-[300px] flex flex-col items-center justify-center p-10 border-2 border-dashed border-gray-200 rounded-xl bg-white text-gray-400">
-                <ClipboardCheck className="h-16 w-16 mb-4 opacity-10" />
-                <p className="text-center">Chưa có dữ liệu tra cứu.<br/>Ní nhập mã hợp đồng bên trái nhen!</p>
+              <div className="h-full min-h-[350px] flex flex-col items-center justify-center p-10 border-2 border-dashed border-gray-200 rounded-xl bg-white text-gray-400">
+                <Banknote className="h-16 w-16 mb-4 opacity-10" />
+                <p>Ní vui lòng nhập mã hợp đồng và bấm xác nhận.</p>
               </div>
             ) : (
-              <div className="bg-white rounded-xl shadow-md border border-gray-100 overflow-hidden">
-                <div className="bg-emerald-50 px-6 py-4 border-b border-emerald-100 flex justify-between items-center">
-                  <h2 className="text-emerald-800 font-bold flex items-center gap-2">
-                    <Wallet className="h-5 w-5" />
-                    THÔNG TIN CHI TIẾT HOÀN CỌC
-                  </h2>
-                  <span className="text-xs bg-emerald-200 text-emerald-800 px-2 py-1 rounded-full font-bold">
-                    Hợp đồng: {result.maHopDong}
-                  </span>
-                </div>
-                
-                <div className="p-6 space-y-6">
-                  {/* Bảng giá tiền */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="p-4 bg-gray-50 rounded-lg border border-gray-100">
-                      <p className="text-xs text-gray-500 uppercase font-bold mb-1">Tiền hoàn cọc dự kiến</p>
-                      <p className="text-xl font-bold text-gray-800">{result.tienHoanCoc?.toLocaleString()} VNĐ</p>
-                    </div>
-                    <div className="p-4 bg-red-50 rounded-lg border border-red-100">
-                      <p className="text-xs text-red-400 uppercase font-bold mb-1">Tổng chi phí khấu trừ</p>
-                      <p className="text-xl font-bold text-red-600">-{result.tongChiPhi?.toLocaleString()} VNĐ</p>
-                    </div>
+              <div className="bg-white rounded-xl shadow-lg border border-indigo-100 overflow-hidden">
+                <div className="bg-indigo-600 px-6 py-4 flex justify-between items-center text-white">
+                  <div>
+                    <h2 className="font-bold text-lg flex items-center gap-2">
+                      <CheckCircle2 className="h-5 w-5 text-indigo-200" />
+                      CHỨNG TỪ HOÀN TẤT
+                    </h2>
+                    <p className="text-xs text-indigo-200 uppercase mt-1">Mã số: {result.maHopDong}</p>
                   </div>
-
-                  {/* Tổng kết cuối cùng */}
-                  <div className="border-t border-b border-gray-100 py-4 flex justify-between items-center">
-                    <span className="text-gray-700 font-medium italic">Thành tiền cuối cùng thực nhận:</span>
-                    <span className="text-2xl font-black text-emerald-700">
-                      {result.thanhTienCuoiCung?.toLocaleString()} VNĐ
+                  <div className="text-right">
+                    <span className="bg-indigo-500 px-3 py-1 rounded-full text-xs font-bold border border-indigo-400">
+                      STATUS: SUCCESS
                     </span>
                   </div>
-
-                  {/* Thông tin thêm */}
-                  <div className="space-y-3">
-                    <div className="flex gap-2 text-sm">
-                      <span className="text-gray-500 font-semibold w-32">Phương thức:</span>
-                      <span className="text-gray-800 bg-gray-100 px-2 py-0.5 rounded">{result.phuongThucThanhToan}</span>
+                </div>
+                
+                <div className="p-8">
+                  <div className="grid grid-cols-2 gap-8 mb-8">
+                    <div>
+                      <p className="text-gray-400 text-xs uppercase font-bold mb-2">Thông tin tài chính</p>
+                      <div className="space-y-3">
+                        <div className="flex justify-between text-sm">
+                          <span className="text-gray-600">Tỉ lệ hoàn:</span>
+                          <span className="font-bold">{result.tyLeHoanCoc}%</span>
+                        </div>
+                        <div className="flex justify-between text-sm">
+                          <span className="text-gray-600">Tiền cọc gốc:</span>
+                          <span className="font-semibold">{result.tienHoanCoc?.toLocaleString()} VNĐ</span>
+                        </div>
+                        <div className="flex justify-between text-sm text-red-500">
+                          <span>Chi phí khấu trừ:</span>
+                          <span>-{result.tongChiPhi?.toLocaleString()} VNĐ</span>
+                        </div>
+                      </div>
                     </div>
-                    <div className="flex gap-2 text-sm">
-                      <span className="text-gray-500 font-semibold w-32">Ghi chú:</span>
-                      <span className="text-gray-600 leading-relaxed">{result.ghiChu || "Không có ghi chú thêm."}</span>
+
+                    <div className="bg-indigo-50 p-5 rounded-2xl flex flex-col justify-center items-center border border-indigo-100">
+                      <p className="text-indigo-600 text-xs uppercase font-black mb-1">Số tiền đã thực chi</p>
+                      <p className="text-3xl font-black text-indigo-900">
+                        {result.thanhTienCuoiCung?.toLocaleString()}
+                      </p>
+                      <p className="text-xs text-indigo-700 font-bold">VNĐ</p>
+                    </div>
+                  </div>
+
+                  <div className="space-y-4 border-t border-gray-100 pt-6">
+                    <div className="flex items-start gap-4">
+                      <div className="w-1/3 text-sm font-bold text-gray-500">Phương thức:</div>
+                      <div className="w-2/3 text-sm text-gray-800 font-medium bg-gray-50 px-3 py-1 rounded-md border border-gray-100">
+                        {result.phuongThucThanhToan}
+                      </div>
+                    </div>
+                    <div className="flex items-start gap-4">
+                      <div className="w-1/3 text-sm font-bold text-gray-500">Ghi chú xác nhận:</div>
+                      <div className="w-2/3 text-sm text-gray-600 italic">
+                        {result.ghiChu || "Hệ thống tự động ghi nhận hoàn cọc."}
+                      </div>
                     </div>
                   </div>
                 </div>
 
-                <div className="bg-gray-50 px-6 py-3 text-center text-[11px] text-gray-400 uppercase tracking-widest">
-                  Xác nhận bởi Hệ thống Quản lý Ký túc xá - 2026
+                <div className="bg-gray-900 px-6 py-3 flex justify-between items-center">
+                  <span className="text-[10px] text-gray-400 font-mono">AUTHCODE: CONFIRM-2026-XNC</span>
+                  <span className="text-[10px] text-gray-400 font-mono">{new Date().toLocaleString()}</span>
                 </div>
               </div>
             )}
