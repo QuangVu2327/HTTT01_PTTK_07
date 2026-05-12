@@ -1,6 +1,8 @@
 'use client'
 
 import React, { useState, ChangeEvent, FormEvent } from 'react';
+import Link from 'next/link'
+import { ChevronLeft } from 'lucide-react'
 import { dangKyThuePhong, findKhachHangByCCCD, RegisterFormData } from '@/lib/services/register_service';
 
 export default function RegisterPage() {
@@ -15,13 +17,11 @@ export default function RegisterPage() {
 
     const [loading, setLoading] = useState<boolean>(false);
 
-    // 1. Hàm xử lý thay đổi Input
     const handleChange = (e: ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
         const { name, value } = e.target;
         setCustomer({ ...customer, [name]: value });
     };
 
-    // 2. Logic Auto-fill khi nhập xong CCCD
     const handleCCCDBlur = async () => {
         if (customer.cccd.length === 12) {
             try {
@@ -41,15 +41,12 @@ export default function RegisterPage() {
         }
     };
 
-    // 3. Hàm gửi Form
     const handleSubmit = async (e: FormEvent) => {
         e.preventDefault();
         setLoading(true);
-
         try {
             await dangKyThuePhong(customer);
             alert(`Xong rồi ní ơi! Đã lưu đơn đăng ký của ${customer.hoTen}.`);
-            // Reset form
             setCustomer({
                 hoTen: '', soDienThoai: '', email: '', 
                 cccd: '', ngayDuKienVao: '', loaiPhongMuonThue: 'PhongDon'
@@ -62,71 +59,87 @@ export default function RegisterPage() {
     };
 
     return (
-        <div style={containerStyle}>
-            <div style={cardStyle}>
-                <h2 style={titleStyle}>ĐƠN ĐĂNG KÝ THUÊ PHÒNG</h2>
-                <p style={subTitleStyle}>Nhập số CCCD để tự động điền thông tin khách cũ</p>
-                <hr style={{ margin: '20px 0', opacity: 0.2 }} />
+        <div className="min-h-screen bg-gray-50">
+            {/* Header giống hệt bài bạn của ní */}
+            <div className="border-b border-gray-200 bg-white px-6 py-4">
+                <Link
+                    href="/dashboard"
+                    className="inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-900 transition-colors"
+                >
+                    <ChevronLeft className="h-4 w-4" />
+                    Quay về Dashboard
+                </Link>
+            </div>
 
-                <form onSubmit={handleSubmit} style={formStyle}>
-                    <div>
-                        <label style={labelStyle}>Số CCCD/CMND (12 số):</label>
-                        <input 
-                            type="text" name="cccd" value={customer.cccd} 
-                            onChange={handleChange} onBlur={handleCCCDBlur}
-                            placeholder="Nhập 12 số CCCD để kiểm tra..."
-                            style={inputStyle} required disabled={loading} 
-                        />
+            {/* Nội dung chính */}
+            <div className="flex justify-center items-center py-10 px-4">
+                <div className="bg-white p-8 rounded-xl shadow-sm border border-gray-100 max-w-2xl w-full">
+                    <div className="mb-8 text-center">
+                        <h2 className="text-2xl font-bold text-gray-800">ĐƠN ĐĂNG KÝ THUÊ PHÒNG</h2>
+                        <p className="text-sm text-gray-500 mt-2">Nhập số CCCD để tự động điền thông tin khách cũ</p>
                     </div>
 
-                    <div style={rowStyle}>
-                        <div style={{ flex: 1 }}>
-                            <label style={labelStyle}>Họ và Tên:</label>
-                            <input type="text" name="hoTen" value={customer.hoTen} onChange={handleChange} style={inputStyle} required disabled={loading} />
+                    <form onSubmit={handleSubmit} className="space-y-6">
+                        {/* CCCD Field */}
+                        <div>
+                            <label className="block text-sm font-semibold text-gray-700 mb-2">Số CCCD/CMND (12 số):</label>
+                            <input 
+                                type="text" name="cccd" value={customer.cccd} 
+                                onChange={handleChange} onBlur={handleCCCDBlur}
+                                placeholder="Nhập 12 số CCCD để kiểm tra..."
+                                className="w-full p-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+                                required disabled={loading} 
+                            />
                         </div>
-                        <div style={{ flex: 1 }}>
-                            <label style={labelStyle}>Số điện thoại:</label>
-                            <input type="tel" name="soDienThoai" value={customer.soDienThoai} onChange={handleChange} style={inputStyle} required disabled={loading} />
-                        </div>
-                    </div>
 
-                    <div>
-                        <label style={labelStyle}>Email:</label>
-                        <input type="email" name="email" value={customer.email} onChange={handleChange} style={inputStyle} disabled={loading} />
-                    </div>
-
-                    <div style={rowStyle}>
-                        <div style={{ flex: 1 }}>
-                            <label style={labelStyle}>Ngày dự kiến vào ở:</label>
-                            <input type="date" name="ngayDuKienVao" value={customer.ngayDuKienVao} onChange={handleChange} style={inputStyle} disabled={loading} />
+                        {/* Row: Họ tên & SĐT */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div>
+                                <label className="block text-sm font-semibold text-gray-700 mb-2">Họ và Tên:</label>
+                                <input type="text" name="hoTen" value={customer.hoTen} onChange={handleChange} className="w-full p-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 outline-none" required disabled={loading} />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-semibold text-gray-700 mb-2">Số điện thoại:</label>
+                                <input type="tel" name="soDienThoai" value={customer.soDienThoai} onChange={handleChange} className="w-full p-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 outline-none" required disabled={loading} />
+                            </div>
                         </div>
-                        <div style={{ flex: 1 }}>
-                            <label style={labelStyle}>Loại phòng:</label>
-                            <select name="loaiPhongMuonThue" value={customer.loaiPhongMuonThue} onChange={handleChange} style={inputStyle} disabled={loading}>
-                                <option value="PhongDon">Phòng Đơn</option>
-                                <option value="PhongDoi">Phòng Đôi</option>
-                                <option value="PhongGhep">Phòng Ở Ghép</option>
-                            </select>
-                        </div>
-                    </div>
 
-                    <button type="submit" disabled={loading} style={loading ? btnDisabledStyle : btnStyle}>
-                        {loading ? 'Đang gửi dữ liệu...' : 'Xác nhận Đăng ký'}
-                    </button>
-                </form>
+                        {/* Email */}
+                        <div>
+                            <label className="block text-sm font-semibold text-gray-700 mb-2">Email:</label>
+                            <input type="email" name="email" value={customer.email} onChange={handleChange} className="w-full p-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 outline-none" disabled={loading} />
+                        </div>
+
+                        {/* Row: Ngày & Loại phòng */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div>
+                                <label className="block text-sm font-semibold text-gray-700 mb-2">Ngày dự kiến vào ở:</label>
+                                <input type="date" name="ngayDuKienVao" value={customer.ngayDuKienVao} onChange={handleChange} className="w-full p-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 outline-none" disabled={loading} />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-semibold text-gray-700 mb-2">Loại phòng:</label>
+                                <select name="loaiPhongMuonThue" value={customer.loaiPhongMuonThue} onChange={handleChange} className="w-full p-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 outline-none" disabled={loading}>
+                                    <option value="PhongDon">Phòng Đơn</option>
+                                    <option value="PhongDoi">Phòng Đôi</option>
+                                    <option value="PhongGhep">Phòng Ở Ghép</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <button 
+                            type="submit" 
+                            disabled={loading} 
+                            className={`w-full py-4 rounded-lg font-bold text-lg transition-all ${
+                                loading 
+                                ? 'bg-gray-400 cursor-not-allowed' 
+                                : 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg'
+                            }`}
+                        >
+                            {loading ? 'Đang gửi dữ liệu...' : 'Xác nhận Đăng ký'}
+                        </button>
+                    </form>
+                </div>
             </div>
         </div>
     );
 }
-
-// --- CSS-in-JS (Style cho đẹp) ---
-const containerStyle: React.CSSProperties = { minHeight: '100vh', backgroundColor: '#f4f7f6', display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '20px' };
-const cardStyle: React.CSSProperties = { backgroundColor: '#fff', padding: '40px', borderRadius: '12px', boxShadow: '0 10px 25px rgba(0,0,0,0.1)', maxWidth: '600px', width: '100%' };
-const titleStyle: React.CSSProperties = { textAlign: 'center', margin: 0, color: '#2c3e50', fontSize: '24px' };
-const subTitleStyle: React.CSSProperties = { textAlign: 'center', fontSize: '13px', color: '#7f8c8d', marginTop: '5px' };
-const formStyle: React.CSSProperties = { display: 'flex', flexDirection: 'column', gap: '20px' };
-const rowStyle: React.CSSProperties = { display: 'flex', gap: '20px' };
-const labelStyle: React.CSSProperties = { display: 'block', marginBottom: '8px', fontWeight: 'bold', fontSize: '14px', color: '#34495e' };
-const inputStyle: React.CSSProperties = { width: '100%', padding: '12px', borderRadius: '6px', border: '1px solid #dcdde1', outline: 'none', transition: 'border 0.3s' };
-const btnStyle: React.CSSProperties = { marginTop: '10px', padding: '15px', backgroundColor: '#27ae60', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold', fontSize: '16px' };
-const btnDisabledStyle: React.CSSProperties = { ...btnStyle, backgroundColor: '#95a5a6', cursor: 'not-allowed' };
