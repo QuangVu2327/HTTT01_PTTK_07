@@ -12,7 +12,7 @@ const MH_TinhTiLeHoanCoc: React.FC = () => {
 
   const handleTinhToan = async () => {
     if (!maHopDong) {
-      alert("Ní ơi, nhập mã hợp đồng giúp tui với!");
+      alert("Yêu cầu nhập mã hợp đồng!");
       return;
     }
     setLoading(true);
@@ -20,7 +20,7 @@ const MH_TinhTiLeHoanCoc: React.FC = () => {
       const data = await MH_TinhTiLeHoanCocService.tinhHoanCoc(maHopDong);
       setResult(data);
     } catch (err: any) {
-      alert("Có lỗi xảy ra rồi ní ui: " + err.message);
+      alert("Có lỗi xảy ra: " + err.message);
     } finally {
       setLoading(false);
     }
@@ -100,7 +100,7 @@ const MH_TinhTiLeHoanCoc: React.FC = () => {
             {!result ? (
               <div className="h-full flex flex-col items-center justify-center p-10 border-2 border-dashed border-gray-200 rounded-xl bg-white text-gray-400">
                 <Calculator className="h-12 w-12 mb-2 opacity-20" />
-                <p>Nhập mã và bấm tính toán để xem kết quả ní nhen!</p>
+                <p>Nhập mã và bấm tính toán để xem kết quả!</p>
               </div>
             ) : (
               <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
