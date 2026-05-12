@@ -4,7 +4,7 @@ import { Building2, Users, ClipboardList, UserCheck, Mail, BedDouble, Calculator
 const LINKS = [
     { label: 'Customer Information', href: '/customer/provide_information', icon: Users, desc: 'Customer info' },
     //{ label: 'Rooms (Customer)', href: '/dashboard/customer/rooms', icon: BedDouble, desc: 'Browse available rooms' },
-    //{ label: 'Manager Check Costumer', href: '/manager/check_customer', icon: Building2, desc: 'Manager home' },
+    { label: 'Deposit Request', href: '/accountant/deposit-requests', icon: Building2, desc: 'Create deposit request' },
     { label: 'Sales', href: '/sales', icon: ClipboardList, desc: 'Control Sales' },
     { label: 'Check Customer', href: '/manager/check_customer', icon: UserCheck, desc: 'Verify resident info' },
     { label: 'Send Email', href: '/dashboard/manager/pick', icon: Mail, desc: 'Email customers' },
