@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { Building2, Users, ClipboardList, UserCheck, Mail, BedDouble } from 'lucide-react'
+import { Building2, Users, ClipboardList, UserCheck, Mail, BedDouble, Calculator, SearchCheck, ShieldCheck, FileSearch } from 'lucide-react'
 
 const LINKS = [
     { label: 'Customer Information', href: '/customer/provide_information', icon: Users, desc: 'Customer info' },
@@ -8,7 +8,11 @@ const LINKS = [
     { label: 'Sales', href: '/sales', icon: ClipboardList, desc: 'Control Sales' },
     { label: 'Check Customer', href: '/manager/check_customer', icon: UserCheck, desc: 'Verify resident info' },
     { label: 'Send Email', href: '/dashboard/manager/pick', icon: Mail, desc: 'Email customers' },
-    //{ label: 'Buildings', href: '/dashboard/manager/buildings', icon: Building2, desc: 'Manage buildings & rooms' },
+    { label: 'Refund Calculation', href: '/accountant/deposit_calculate', icon: Calculator, desc: 'Calculating the return deposit' },
+    { label: 'Refund Confirmation', href: '/accountant/deposit_confirm_return', icon: ShieldCheck,desc: 'Confirm the refund of deposit'},
+    { label: 'Refund Verification', href: '/account/deposit_check_return', icon: SearchCheck, desc: 'Checking for the refund information'},
+    { label: 'Rental Request Check', href: '/sales/check_form', icon: FileSearch, desc: 'Checking for rental form'},
+    { label: 'Room Management', href: '/manager/check_room', icon: BedDouble, desc: 'Managing the room'},
 ]
 
 export default function DashboardIndexPage() {
