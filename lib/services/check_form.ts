@@ -15,8 +15,9 @@ export class MH_XemYeuCauThueService {
       .from("yeucauthue")
       .select("*")
       .eq("ma_yeu_cau", ma_yeu_cau)
-      .single();
+      .maybeSingle(); // ✅ was .single()
     if (error) throw error;
+    if (!data) throw new Error(`Không tìm thấy yêu cầu thuê: ${ma_yeu_cau}`);
     return data;
   }
 
@@ -26,8 +27,9 @@ export class MH_XemYeuCauThueService {
       .from("khachhang")
       .select("*")
       .eq("ma_khach_hang", ma_khach_hang)
-      .single();
+      .maybeSingle(); // ✅ was .single()
     if (error) throw error;
+    if (!data) throw new Error(`Không tìm thấy khách hàng: ${ma_khach_hang}`);
     return data;
   }
 
@@ -37,8 +39,9 @@ export class MH_XemYeuCauThueService {
       .from("nhanviensale")
       .select("*")
       .eq("ma_nhan_vien", ma_nv)
-      .single();
+      .maybeSingle(); // ✅ was .single()
     if (error) throw error;
+    if (!data) throw new Error(`Không tìm thấy nhân viên: ${ma_nv}`);
     return data;
   }
 
