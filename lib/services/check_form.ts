@@ -34,9 +34,9 @@ export class MH_XemYeuCauThueService {
   // Lấy thông tin nhân viên kinh doanh
   static async layThongTinNhanVien(ma_nv: string) {
     const { data, error } = await supabase
-      .from("nhanvienkinhdoanh")
+      .from("nhanviensale")
       .select("*")
-      .eq("ma_nv", ma_nv)
+      .eq("ma_nv", ma_nhan_vien)
       .single();
     if (error) throw error;
     return data;
