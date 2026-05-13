@@ -4,7 +4,7 @@ import { supabase } from "@/lib/supabase";
 export class MH_XacNhanHoanCocService {
   static async layThongTinPhieu(ma_hop_dong: string) {
     const { data, error } = await supabase
-      .from("PhieuTraPhong")
+      .from("phieutraphong")
       .select("*")
       .eq("ma_hop_dong", ma_hop_dong)
       .single();
@@ -14,7 +14,7 @@ export class MH_XacNhanHoanCocService {
 
   static async layThongTinKhachHang(ma_khach_hang: string) {
     const { data, error } = await supabase
-      .from("KhachHang")
+      .from("khachhang")
       .select("*")
       .eq("ma_khach_hang", ma_khach_hang)
       .single();
@@ -24,7 +24,7 @@ export class MH_XacNhanHoanCocService {
 
   static async capNhatPhieu(ma_hop_dong: string, trang_thai: string) {
     const { data, error } = await supabase
-      .from("PhieuTraPhong")
+      .from("phieutraphong")
       .update({ trang_thai })
       .eq("ma_hop_dong", ma_hop_dong);
     if (error) throw error;
@@ -36,7 +36,7 @@ export class MH_XacNhanHoanCocService {
     if (!phieu) throw new Error("Không tìm thấy phiếu trả phòng");
 
     const tyLeHoan = phieu.ty_le_hoan_coc ?? 0;
-    const tienHoan = (phieu.tien_hoan_coc_ban ?? 0) * tyLeHoan;
+    const tienHoan = (phieu.tien_hoan_co_ban ?? 0) * tyLeHoan;
     const tongChiPhi =
       (phieu.no_tien ?? 0) +
       (phieu.no_dien_nuoc ?? 0) +
