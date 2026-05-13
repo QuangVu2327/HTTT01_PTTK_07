@@ -192,7 +192,7 @@ export async function xetDuyetThongTin(
 }
 
 // ================================================
-// UC 2.5.12 — TraCuuKetQuaThongTinCuTru (Khách hàng)
+// TraCuuKetQuaThongTinCuTru (Khách hàng)
 // ================================================
 
 /**
