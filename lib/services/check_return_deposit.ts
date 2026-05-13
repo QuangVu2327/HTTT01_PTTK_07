@@ -5,7 +5,7 @@ export class MH_KiemTraThongTinHoanCocService {
   // Lấy thông tin hợp đồng
   static async layThongTinHopDong(ma_hop_dong: string) {
     const { data, error } = await supabase
-      .from("HopDong")
+      .from("hopdong")
       .select("*")
       .eq("ma_hop_dong", ma_hop_dong)
       .single();
@@ -16,7 +16,7 @@ export class MH_KiemTraThongTinHoanCocService {
   // Lấy thông tin phiếu đặt cọc
   static async layThongTinDatCoc(ma_phieu_coc: string, ma_khach_hang: string) {
     const { data, error } = await supabase
-      .from("PhieuDatCoc")
+      .from("phieudatcoc")
       .select("*")
       .eq("ma_phieu_coc", ma_phieu_coc)
       .eq("ma_khach_hang", ma_khach_hang)
@@ -28,7 +28,7 @@ export class MH_KiemTraThongTinHoanCocService {
   // Lấy thông tin phiếu trả phòng
   static async layThongTinPhieuTra(ma_hop_dong: string) {
     const { data, error } = await supabase
-      .from("PhieuTraPhong")
+      .from("phieutraphong")
       .select("*")
       .eq("ma_hop_dong", ma_hop_dong)
       .single();
@@ -39,7 +39,7 @@ export class MH_KiemTraThongTinHoanCocService {
   // Lấy thông tin khách hàng
   static async layThongTinKhachHang(ma_khach_hang: string) {
     const { data, error } = await supabase
-      .from("KhachHang")
+      .from("khachhang")
       .select("*")
       .eq("ma_khach_hang", ma_khach_hang)
       .single();
@@ -50,7 +50,7 @@ export class MH_KiemTraThongTinHoanCocService {
   // Lấy thông tin giường
   static async layThongTinGiuong(ma_giuong: string) {
     const { data, error } = await supabase
-      .from("Giuong")
+      .from("giuong")
       .select("*")
       .eq("ma_giuong", ma_giuong)
       .single();
