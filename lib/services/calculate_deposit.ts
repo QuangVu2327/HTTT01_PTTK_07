@@ -7,7 +7,7 @@ export class MH_TinhTiLeHoanCocService {
    */
   static async layThongTinPhieu(ma_hop_dong: string) {
     const { data, error } = await supabase
-      .from("PhieuTraPhong")
+      .from("phieutraphong")
       .select("*")
       .eq("ma_hop_dong", ma_hop_dong)
       .single();
@@ -27,7 +27,7 @@ export class MH_TinhTiLeHoanCocService {
     }
 
     const tyLeHoan = phieu.ty_le_hoan_coc ?? 0;
-    const tienHoan = (phieu.tien_hoan_coc_ban ?? 0) * tyLeHoan;
+    const tienHoan = (phieu.tien_hoan_co_ban ?? 0) * tyLeHoan;
 
     const tongChiPhi = (phieu.no_tien_thue ?? 0)
       + (phieu.no_dien_nuoc ?? 0)
