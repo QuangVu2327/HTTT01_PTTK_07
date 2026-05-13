@@ -36,7 +36,7 @@ export class MH_XemYeuCauThueService {
     const { data, error } = await supabase
       .from("nhanviensale")
       .select("*")
-      .eq("ma_nv", ma_nhan_vien)
+      .eq("ma_nhan_vien", ma_nv)
       .single();
     if (error) throw error;
     return data;
