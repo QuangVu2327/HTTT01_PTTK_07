@@ -7,8 +7,9 @@ export class MH_XacNhanHoanCocService {
       .from("phieutraphong")
       .select("*")
       .eq("ma_hop_dong", ma_hop_dong)
-      .single();
+      .maybeSingle(); // ✅ was .single() — throws if 0 or >1 rows
     if (error) throw error;
+    if (!data) throw new Error(`Không tìm thấy phiếu trả phòng cho hợp đồng: ${ma_hop_dong}`);
     return data;
   }
 
@@ -17,8 +18,9 @@ export class MH_XacNhanHoanCocService {
       .from("khachhang")
       .select("*")
       .eq("ma_khach_hang", ma_khach_hang)
-      .single();
+      .maybeSingle(); // ✅ was .single()
     if (error) throw error;
+    if (!data) throw new Error(`Không tìm thấy khách hàng: ${ma_khach_hang}`);
     return data;
   }
 
@@ -33,7 +35,7 @@ export class MH_XacNhanHoanCocService {
 
   static async tinhToanHoanCoc(ma_hop_dong: string) {
     const phieu = await this.layThongTinPhieu(ma_hop_dong);
-    if (!phieu) throw new Error("Không tìm thấy phiếu trả phòng");
+    // null check is now handled inside layThongTinPhieu, so phieu is guaranteed here
 
     const tyLeHoan = phieu.ty_le_hoan_coc ?? 0;
     const tienHoan = (phieu.tien_hoan_co_ban ?? 0) * tyLeHoan;
