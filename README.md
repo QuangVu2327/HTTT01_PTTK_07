@@ -31,7 +31,15 @@ cd <project-folder>
 pnpm install
 ```
 
-### 3. Run the app
+### 3. Create a file named .env.local in the root of your project and add the following keys:
+
+```bash
+NEXT_PUBLIC_SUPABASE_URL=your_supabase_project_url
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+RESEND_API_KEY=your_resend_api_key
+```
+
+### 4. Run the app
 
 ```bash
 pnpm dev
