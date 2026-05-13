@@ -10,9 +10,14 @@ export class MH_TinhTiLeHoanCocService {
       .from("phieutraphong")
       .select("*")
       .eq("ma_hop_dong", ma_hop_dong)
-      .single();
+      .maybeSingle();
 
     if (error) throw error;
+    
+    if (!data) {
+      throw new Error(`Không tìm thấy phiếu trả phòng cho hợp đồng: ${ma_hop_dong}`);
+    }
+    
     return data;
   }
 
